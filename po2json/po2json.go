@@ -3,6 +3,7 @@ package po2json
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"regexp"
 	"strings"
 )
@@ -60,7 +61,20 @@ func (l *Loader) init() {
 	l.poJSON = map[string]interface{}{}
 }
 
-func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
+func (l *Loader) LoadFile(filePath string) (map[string]interface{}, error) {
+	fileContents, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return l.LoadBytes(fileContents)
+}
+
+func (l *Loader) LoadBytes(fileContents []byte) (map[string]interface{}, error) {
+	return l.LoadString(string(fileContents))
+}
+
+func (l *Loader) LoadString(fileContents string) (map[string]interface{}, error) {
 	l.init()
 
 	for _, line := range strings.Split(fileContents, "\n") {
@@ -185,7 +199,6 @@ func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
 	return l.poJSON, nil
 }
 
-// TODO: Check submatch lengths to ensure no index out of bounds
 func (l *Loader) addKeyToJson() error {
 	msgctxt := l.key.Msgctxt.String()
 	msgid := l.key.Msgid.String()
