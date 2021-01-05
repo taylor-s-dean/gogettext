@@ -69,7 +69,8 @@ func TestGogettext(t *testing.T) {
 }
 
 func (t *TestSuite) TestPO2JSON() {
-	poJSON, err := po2json(testPOFileContents)
+	loader := Loader{}
+	poJSON, err := loader.Load(testPOFileContents)
 	t.NoError(err)
 
 	enc := json.NewEncoder(os.Stdout)
