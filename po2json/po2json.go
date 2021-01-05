@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type Key struct {
+type translationKey struct {
 	Msgctxt      strings.Builder
 	Msgid        strings.Builder
 	Msgstr       strings.Builder
@@ -15,10 +15,10 @@ type Key struct {
 	MsgstrPlural []*strings.Builder
 }
 
-type State int
+type stateEnum int
 
 const (
-	stateUnspecified State = iota
+	stateUnspecified stateEnum = iota
 	stateMsgctxt
 	stateMsgid
 	stateMsgstr
@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	stateStrings = map[State]string{
+	stateStrings = map[stateEnum]string{
 		stateUnspecified:  "unspecified",
 		stateMsgctxt:      "msgctxt",
 		stateMsgid:        "msgid",
@@ -48,15 +48,15 @@ var (
 )
 
 type Loader struct {
-	currentKey      Key
-	currentState    State
-	validNextStates map[State]bool
-	poJSON          map[string]interface{}
+	key        translationKey
+	state      stateEnum
+	nextStates map[stateEnum]bool
+	poJSON     map[string]interface{}
 }
 
 func (l *Loader) init() {
-	l.currentState = stateUnspecified
-	l.validNextStates = map[State]bool{stateMsgctxt: true, stateMsgid: true}
+	l.state = stateUnspecified
+	l.nextStates = map[stateEnum]bool{stateMsgctxt: true, stateMsgid: true}
 	l.poJSON = map[string]interface{}{}
 }
 
@@ -64,24 +64,22 @@ func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
 	l.init()
 
 	for _, line := range strings.Split(fileContents, "\n") {
-		fmt.Println("LINE::" + line)
 		// Ignore the line if it is a comment.
 		// We expect the next line to be anything.
 		if regexComment.MatchString(line) {
-			fmt.Println("STATE::COMMENT")
 			continue
 		}
 
 		// If this is an empty line, then we expect the next
 		// non-empty non-comment line to be msgctxt or msgid.
 		if regexEmpty.MatchString(line) {
-			fmt.Println("STATE::EMPTY")
 			if err := l.addKeyToJson(); err != nil {
 				return nil, err
 			}
-			l.currentKey = Key{}
-			l.currentState = stateUnspecified
-			l.validNextStates = map[State]bool{stateMsgctxt: true, stateMsgid: true}
+
+			l.key = translationKey{}
+			l.state = stateUnspecified
+			l.nextStates = map[stateEnum]bool{stateMsgctxt: true, stateMsgid: true}
 			continue
 		}
 
@@ -89,14 +87,13 @@ func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
 		// 1) msgctxt must be a valid state.
 		// 2) We expect the next line to be either a string or a msgid.
 		if submatch := regexMsgctxt.FindStringSubmatch(line); submatch != nil {
-			fmt.Println("STATE::MSGCTXT")
-			l.currentState = stateMsgctxt
+			l.state = stateMsgctxt
 			if err := l.expectState(); err != nil {
 				return nil, err
 			}
 
-			l.validNextStates = map[State]bool{stateMsgid: true}
-			l.currentKey.Msgctxt.WriteString(submatch[1])
+			l.nextStates = map[stateEnum]bool{stateMsgid: true}
+			l.key.Msgctxt.WriteString(submatch[1])
 			continue
 		}
 
@@ -104,14 +101,13 @@ func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
 		// 1) msgid must be a valid state.
 		// 2) We expect the next line to be either a string, msgstr, or msgid_plural.
 		if submatch := regexMsgid.FindStringSubmatch(line); submatch != nil {
-			fmt.Println("STATE::MSGID")
-			l.currentState = stateMsgid
+			l.state = stateMsgid
 			if err := l.expectState(); err != nil {
 				return nil, err
 			}
 
-			l.validNextStates = map[State]bool{stateMsgidPlural: true, stateMsgstr: true}
-			l.currentKey.Msgid.WriteString(submatch[1])
+			l.nextStates = map[stateEnum]bool{stateMsgidPlural: true, stateMsgstr: true}
+			l.key.Msgid.WriteString(submatch[1])
 			continue
 		}
 
@@ -119,14 +115,13 @@ func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
 		// 1) msgstr must be a valid state.
 		// 2) We expect the next line to be either a string or blank.
 		if submatch := regexMsgstr.FindStringSubmatch(line); submatch != nil {
-			fmt.Println("STATE::MSGSTR")
-			l.currentState = stateMsgstr
+			l.state = stateMsgstr
 			if err := l.expectState(); err != nil {
 				return nil, err
 			}
 
-			l.validNextStates = map[State]bool{stateMsgidPlural: true, stateMsgstr: true}
-			l.currentKey.Msgstr.WriteString(submatch[1])
+			l.nextStates = map[stateEnum]bool{stateMsgidPlural: true, stateMsgstr: true}
+			l.key.Msgstr.WriteString(submatch[1])
 			continue
 		}
 
@@ -134,14 +129,13 @@ func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
 		// 1) msgid_plural must be a valid state.
 		// 2) We expect the next line to be either a string or msgstr_plural.
 		if submatch := regexMsgidPlural.FindStringSubmatch(line); submatch != nil {
-			fmt.Println("STATE::MSGID_PLURAL")
-			l.currentState = stateMsgidPlural
+			l.state = stateMsgidPlural
 			if err := l.expectState(); err != nil {
 				return nil, err
 			}
 
-			l.validNextStates = map[State]bool{stateMsgstrPlural: true}
-			l.currentKey.MsgidPlural.WriteString(submatch[1])
+			l.nextStates = map[stateEnum]bool{stateMsgstrPlural: true}
+			l.key.MsgidPlural.WriteString(submatch[1])
 			continue
 		}
 
@@ -149,16 +143,15 @@ func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
 		// 1) msgstr_plural must be a valid state.
 		// 2) We expect the next line to be either a string, msgstr_plural, or blank.
 		if submatch := regexMsgstrPlural.FindStringSubmatch(line); submatch != nil {
-			fmt.Println("STATE::MSGSTR_PLURAL")
-			l.currentState = stateMsgstrPlural
+			l.state = stateMsgstrPlural
 			if err := l.expectState(); err != nil {
 				return nil, err
 			}
 
-			l.validNextStates = map[State]bool{stateMsgstrPlural: true}
+			l.nextStates = map[stateEnum]bool{stateMsgstrPlural: true}
 			plural := strings.Builder{}
 			plural.WriteString(submatch[1])
-			l.currentKey.MsgstrPlural = append(l.currentKey.MsgstrPlural, &plural)
+			l.key.MsgstrPlural = append(l.key.MsgstrPlural, &plural)
 			continue
 		}
 
@@ -166,18 +159,17 @@ func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
 		// 1) Append the string to the existing string as determined by the
 		// current_state.
 		if submatch := regexString.FindStringSubmatch(line); submatch != nil {
-			fmt.Println("STRING")
-			switch l.currentState {
+			switch l.state {
 			case stateMsgctxt:
-				l.currentKey.Msgctxt.WriteString(submatch[1])
+				l.key.Msgctxt.WriteString(submatch[1])
 			case stateMsgid:
-				l.currentKey.Msgid.WriteString(submatch[1])
+				l.key.Msgid.WriteString(submatch[1])
 			case stateMsgstr:
-				l.currentKey.Msgstr.WriteString(submatch[1])
+				l.key.Msgstr.WriteString(submatch[1])
 			case stateMsgidPlural:
-				l.currentKey.MsgidPlural.WriteString(submatch[1])
+				l.key.MsgidPlural.WriteString(submatch[1])
 			case stateMsgstrPlural:
-				l.currentKey.MsgstrPlural[len(l.currentKey.MsgstrPlural)-1].WriteString(submatch[1])
+				l.key.MsgstrPlural[len(l.key.MsgstrPlural)-1].WriteString(submatch[1])
 			case stateUnspecified:
 				return nil, errors.New("Encountered invalid state. Please ensure the input file is in a valid .po format.")
 			}
@@ -195,11 +187,11 @@ func (l *Loader) Load(fileContents string) (map[string]interface{}, error) {
 
 // TODO: Check submatch lengths to ensure no index out of bounds
 func (l *Loader) addKeyToJson() error {
-	msgctxt := l.currentKey.Msgctxt.String()
-	msgid := l.currentKey.Msgid.String()
-	msgstr := l.currentKey.Msgstr.String()
+	msgctxt := l.key.Msgctxt.String()
+	msgid := l.key.Msgid.String()
+	msgstr := l.key.Msgstr.String()
 	msgstrPlural := []string{}
-	for _, plural := range l.currentKey.MsgstrPlural {
+	for _, plural := range l.key.MsgstrPlural {
 		msgstrPlural = append(msgstrPlural, plural.String())
 	}
 
@@ -215,7 +207,6 @@ func (l *Loader) addKeyToJson() error {
 
 	if len(msgstr) > 0 {
 		if len(msgid) == 0 {
-			fmt.Println("HEADER")
 			for _, submatch := range regexHeaderKeyValue.FindAllStringSubmatch(msgstr, -1) {
 				key := submatch[1]
 				if _, ok := msgidObj[key]; ok {
@@ -224,7 +215,6 @@ func (l *Loader) addKeyToJson() error {
 				msgidObj[key] = submatch[2]
 			}
 		} else {
-			fmt.Println("TRANSLATION")
 			if _, ok := msgidObj["translation"]; ok {
 				return fmt.Errorf("Invalid .po file. Found duplicate msgstr for msgid (%s).", msgid)
 			}
@@ -232,27 +222,23 @@ func (l *Loader) addKeyToJson() error {
 		}
 	}
 	if len(msgstrPlural) > 0 {
-		if _, ok := msgidObj["plurals"]; !ok {
-			msgidObj["plurals"] = &[]string{}
-		}
-		pluralsObj := msgidObj["plurals"].(*[]string)
-		*pluralsObj = append(*pluralsObj, msgstrPlural...)
+		msgidObj["plurals"] = msgstrPlural
 	}
 
 	return nil
 }
 
 func (l *Loader) expectState() error {
-	if !l.validNextStates[l.currentState] {
-		return errors.New(fmt.Sprintf("Invalid .po file. Found %s, expected one of %s.", stateStrings[l.currentState], l.printValidNextStates()))
+	if !l.nextStates[l.state] {
+		return errors.New(fmt.Sprintf("Invalid .po file. Found %s, expected one of %s.", stateStrings[l.state], l.printNextStates()))
 	}
 	return nil
 }
 
-func (l *Loader) printValidNextStates() string {
+func (l *Loader) printNextStates() string {
 	ss := strings.Builder{}
 	ss.WriteRune('{')
-	for state := range l.validNextStates {
+	for state := range l.nextStates {
 		ss.WriteString(stateStrings[state])
 	}
 	ss.WriteRune('}')
