@@ -2,14 +2,23 @@ package gogettext
 
 import (
 	"encoding/json"
+	"regexp"
+	"strconv"
 	"sync"
 
+	"github.com/Knetic/govaluate"
 	"github.com/taylor-s-dean/gogettext/po2json"
 )
 
+var (
+	pluralFormsRegex = regexp.MustCompile(`nplurals\s*=\s*(\d+);\s*plural\s*=\s*([n0-9%!=&|?:><+() \-]+);`)
+)
+
 type MessageCatalog struct {
-	messages map[string]interface{}
-	mutex    sync.RWMutex
+	messages    map[string]interface{}
+	mutex       sync.RWMutex
+	pluralForms *govaluate.EvaluableExpression
+	nPlurals    int64
 }
 
 func NewMessageCatalogFromFile(filePath string) (*MessageCatalog, error) {
@@ -21,6 +30,10 @@ func NewMessageCatalogFromFile(filePath string) (*MessageCatalog, error) {
 	mc.mutex.Unlock()
 
 	if err != nil {
+		return nil, err
+	}
+
+	if err := mc.setPluralForms(); err != nil {
 		return nil, err
 	}
 
@@ -39,6 +52,10 @@ func NewMessageCatalogFromString(fileContents string) (*MessageCatalog, error) {
 		return nil, err
 	}
 
+	if err := mc.setPluralForms(); err != nil {
+		return nil, err
+	}
+
 	return mc, nil
 }
 
@@ -51,6 +68,10 @@ func NewMessageCatalogFromBytes(fileContents []byte) (*MessageCatalog, error) {
 	mc.mutex.Unlock()
 
 	if err != nil {
+		return nil, err
+	}
+
+	if err := mc.setPluralForms(); err != nil {
 		return nil, err
 	}
 
@@ -74,9 +95,77 @@ func (mc *MessageCatalog) GetMessages() (map[string]interface{}, error) {
 	return *messages, nil
 }
 
+func (mc *MessageCatalog) setPluralForms() error {
+	var err error
+	mc.pluralForms, err = govaluate.NewEvaluableExpression("n==1 ? 0 : 1")
+	if err != nil {
+		return err
+	}
+
+	mc.mutex.RLock()
+	defer mc.mutex.RUnlock()
+
+	if mc.messages == nil {
+		return nil
+	}
+
+	msgctxtObj, ok := mc.messages[""]
+	if !ok {
+		return nil
+	}
+
+	msgctxtMap, ok := msgctxtObj.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	msgidObj, ok := msgctxtMap[""]
+	if !ok {
+		return nil
+	}
+
+	msgidMap, ok := msgidObj.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	pluralFormsObj, ok := msgidMap["Plural-Forms"]
+	if !ok {
+		return nil
+	}
+
+	pluralFormsStr, ok := pluralFormsObj.(string)
+	if !ok {
+		return nil
+	}
+
+	matches := pluralFormsRegex.FindStringSubmatch(pluralFormsStr)
+	if matches == nil {
+		return nil
+	}
+
+	pluralForms, err := govaluate.NewEvaluableExpression(matches[2])
+	if err != nil {
+		return err
+	}
+
+	mc.pluralForms = pluralForms
+	mc.nPlurals, err = strconv.ParseInt(matches[1], 10, 64)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (mc *MessageCatalog) Gettext(msgid string) string {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
+
+	if mc.messages == nil {
+		return msgid
+	}
 
 	msgctxtObj, ok := mc.messages[""]
 	if !ok {
@@ -109,4 +198,64 @@ func (mc *MessageCatalog) Gettext(msgid string) string {
 	}
 
 	return msgstrStr
+}
+
+func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, n int) string {
+	mc.mutex.RLock()
+	defer mc.mutex.RUnlock()
+
+	fallbackMsgstr := msgidSingular
+	if n != 1 {
+		fallbackMsgstr = msgidPlural
+	}
+
+	idxObj, err := mc.pluralForms.Evaluate(map[string]interface{}{"n": n})
+	if err != nil {
+		return fallbackMsgstr
+	}
+
+	idx, ok := idxObj.(int)
+	if !ok {
+		return fallbackMsgstr
+	}
+
+	if mc.messages == nil {
+		return fallbackMsgstr
+	}
+
+	msgctxtObj, ok := mc.messages[""]
+	if !ok {
+		return fallbackMsgstr
+	}
+
+	msgctxtMap, ok := msgctxtObj.(map[string]interface{})
+	if !ok {
+		return fallbackMsgstr
+	}
+
+	msgidObj, ok := msgctxtMap[fallbackMsgstr]
+	if !ok {
+		return fallbackMsgstr
+	}
+
+	msgidMap, ok := msgidObj.(map[string]interface{})
+	if !ok {
+		return fallbackMsgstr
+	}
+
+	msgstrPluralsObj, ok := msgidMap["plurals"]
+	if !ok {
+		return fallbackMsgstr
+	}
+
+	msgstrPluralsList, ok := msgstrPluralsObj.([]string)
+	if !ok {
+		return fallbackMsgstr
+	}
+
+	if len(msgstrPluralsList) < idx+1 {
+		return fallbackMsgstr
+	}
+
+	return msgstrPluralsList[idx]
 }
