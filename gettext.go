@@ -2,6 +2,7 @@ package gogettext
 
 import (
 	"encoding/json"
+	"sync"
 
 	"github.com/taylor-s-dean/gogettext/po2json"
 )
@@ -59,12 +60,17 @@ import (
 
 type MessageCatalog struct {
 	messages map[string]interface{}
+	mutex    sync.RWMutex
 }
 
 func NewMessageCatalogFromFile(filePath string) (*MessageCatalog, error) {
 	mc := &MessageCatalog{}
 	var err error
+
+	mc.mutex.Lock()
 	mc.messages, err = po2json.LoadFile(filePath)
+	mc.mutex.Unlock()
+
 	if err != nil {
 		return nil, err
 	}
@@ -72,6 +78,49 @@ func NewMessageCatalogFromFile(filePath string) (*MessageCatalog, error) {
 	return mc, nil
 }
 
-func (mc *MessageCatalog) GetMessages() {
+func NewMessageCatalogFromString(fileContents string) (*MessageCatalog, error) {
+	mc := &MessageCatalog{}
+	var err error
 
+	mc.mutex.Lock()
+	mc.messages, err = po2json.LoadString(fileContents)
+	mc.mutex.Unlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return mc, nil
+}
+
+func NewMessageCatalogFromBytes(fileContents []byte) (*MessageCatalog, error) {
+	mc := &MessageCatalog{}
+	var err error
+
+	mc.mutex.Lock()
+	mc.messages, err = po2json.LoadBytes(fileContents)
+	mc.mutex.Unlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return mc, nil
+}
+
+func (mc *MessageCatalog) GetMessages() (map[string]interface{}, error) {
+	mc.mutex.RLock()
+	messagesBytes, err := json.Marshal(mc.messages)
+	mc.mutex.RUnlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	messages := &map[string]interface{}{}
+	if err := json.Unmarshal(messagesBytes, messages); err != nil {
+		return nil, err
+	}
+
+	return *messages, nil
 }
