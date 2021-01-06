@@ -1,6 +1,7 @@
 package po2json
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -70,23 +71,23 @@ func (l *Loader) LoadFile(filePath string) (map[string]interface{}, error) {
 	return l.LoadBytes(fileContents)
 }
 
-func (l *Loader) LoadBytes(fileContents []byte) (map[string]interface{}, error) {
-	return l.LoadString(string(fileContents))
+func (l *Loader) LoadString(fileContents string) (map[string]interface{}, error) {
+	return l.LoadBytes([]byte(fileContents))
 }
 
-func (l *Loader) LoadString(fileContents string) (map[string]interface{}, error) {
+func (l *Loader) LoadBytes(fileContents []byte) (map[string]interface{}, error) {
 	l.init()
 
-	for _, line := range strings.Split(fileContents, "\n") {
+	for _, line := range bytes.Split(fileContents, []byte("\n")) {
 		// Ignore the line if it is a comment.
 		// We expect the next line to be anything.
-		if regexComment.MatchString(line) {
+		if regexComment.Match(line) {
 			continue
 		}
 
 		// If this is an empty line, then we expect the next
 		// non-empty non-comment line to be msgctxt or msgid.
-		if regexEmpty.MatchString(line) {
+		if regexEmpty.Match(line) {
 			if err := l.addKeyToJson(); err != nil {
 				return nil, err
 			}
@@ -100,63 +101,63 @@ func (l *Loader) LoadString(fileContents string) (map[string]interface{}, error)
 		// If this is a msgctxt line, then:
 		// 1) msgctxt must be a valid state.
 		// 2) We expect the next line to be either a string or a msgid.
-		if submatch := regexMsgctxt.FindStringSubmatch(line); submatch != nil {
+		if submatch := regexMsgctxt.FindSubmatch(line); submatch != nil {
 			l.state = stateMsgctxt
 			if err := l.expectState(); err != nil {
 				return nil, err
 			}
 
 			l.nextStates = map[stateEnum]bool{stateMsgid: true}
-			l.key.Msgctxt.WriteString(submatch[1])
+			l.key.Msgctxt.Write(submatch[1])
 			continue
 		}
 
 		// If this is a msgid line, then:
 		// 1) msgid must be a valid state.
 		// 2) We expect the next line to be either a string, msgstr, or msgid_plural.
-		if submatch := regexMsgid.FindStringSubmatch(line); submatch != nil {
+		if submatch := regexMsgid.FindSubmatch(line); submatch != nil {
 			l.state = stateMsgid
 			if err := l.expectState(); err != nil {
 				return nil, err
 			}
 
 			l.nextStates = map[stateEnum]bool{stateMsgidPlural: true, stateMsgstr: true}
-			l.key.Msgid.WriteString(submatch[1])
+			l.key.Msgid.Write(submatch[1])
 			continue
 		}
 
 		// If this is a msgstr line, then:
 		// 1) msgstr must be a valid state.
 		// 2) We expect the next line to be either a string or blank.
-		if submatch := regexMsgstr.FindStringSubmatch(line); submatch != nil {
+		if submatch := regexMsgstr.FindSubmatch(line); submatch != nil {
 			l.state = stateMsgstr
 			if err := l.expectState(); err != nil {
 				return nil, err
 			}
 
 			l.nextStates = map[stateEnum]bool{stateMsgidPlural: true, stateMsgstr: true}
-			l.key.Msgstr.WriteString(submatch[1])
+			l.key.Msgstr.Write(submatch[1])
 			continue
 		}
 
 		// If this is a msgid_plural line, then:
 		// 1) msgid_plural must be a valid state.
 		// 2) We expect the next line to be either a string or msgstr_plural.
-		if submatch := regexMsgidPlural.FindStringSubmatch(line); submatch != nil {
+		if submatch := regexMsgidPlural.FindSubmatch(line); submatch != nil {
 			l.state = stateMsgidPlural
 			if err := l.expectState(); err != nil {
 				return nil, err
 			}
 
 			l.nextStates = map[stateEnum]bool{stateMsgstrPlural: true}
-			l.key.MsgidPlural.WriteString(submatch[1])
+			l.key.MsgidPlural.Write(submatch[1])
 			continue
 		}
 
 		// If this is a msgstr_plural line, then:
 		// 1) msgstr_plural must be a valid state.
 		// 2) We expect the next line to be either a string, msgstr_plural, or blank.
-		if submatch := regexMsgstrPlural.FindStringSubmatch(line); submatch != nil {
+		if submatch := regexMsgstrPlural.FindSubmatch(line); submatch != nil {
 			l.state = stateMsgstrPlural
 			if err := l.expectState(); err != nil {
 				return nil, err
@@ -164,7 +165,7 @@ func (l *Loader) LoadString(fileContents string) (map[string]interface{}, error)
 
 			l.nextStates = map[stateEnum]bool{stateMsgstrPlural: true}
 			plural := strings.Builder{}
-			plural.WriteString(submatch[1])
+			plural.Write(submatch[1])
 			l.key.MsgstrPlural = append(l.key.MsgstrPlural, &plural)
 			continue
 		}
@@ -172,18 +173,18 @@ func (l *Loader) LoadString(fileContents string) (map[string]interface{}, error)
 		// If this is a string continuation, then:
 		// 1) Append the string to the existing string as determined by the
 		// current_state.
-		if submatch := regexString.FindStringSubmatch(line); submatch != nil {
+		if submatch := regexString.FindSubmatch(line); submatch != nil {
 			switch l.state {
 			case stateMsgctxt:
-				l.key.Msgctxt.WriteString(submatch[1])
+				l.key.Msgctxt.Write(submatch[1])
 			case stateMsgid:
-				l.key.Msgid.WriteString(submatch[1])
+				l.key.Msgid.Write(submatch[1])
 			case stateMsgstr:
-				l.key.Msgstr.WriteString(submatch[1])
+				l.key.Msgstr.Write(submatch[1])
 			case stateMsgidPlural:
-				l.key.MsgidPlural.WriteString(submatch[1])
+				l.key.MsgidPlural.Write(submatch[1])
 			case stateMsgstrPlural:
-				l.key.MsgstrPlural[len(l.key.MsgstrPlural)-1].WriteString(submatch[1])
+				l.key.MsgstrPlural[len(l.key.MsgstrPlural)-1].Write(submatch[1])
 			case stateUnspecified:
 				return nil, errors.New("Encountered invalid state. Please ensure the input file is in a valid .po format.")
 			}
@@ -223,13 +224,13 @@ func (l *Loader) addKeyToJson() error {
 			for _, submatch := range regexHeaderKeyValue.FindAllStringSubmatch(msgstr, -1) {
 				key := submatch[1]
 				if _, ok := msgidObj[key]; ok {
-					return fmt.Errorf("Invalid .po file. Found duplicate header key (%s).", key)
+					return fmt.Errorf(`Invalid .po file. Found duplicate header key "%s".`, key)
 				}
 				msgidObj[key] = submatch[2]
 			}
 		} else {
 			if _, ok := msgidObj["translation"]; ok {
-				return fmt.Errorf("Invalid .po file. Found duplicate msgstr for msgid (%s).", msgid)
+				return fmt.Errorf(`Invalid .po file. Found duplicate msgstr for msgid "%s".`, msgid)
 			}
 			msgidObj["translation"] = msgstr
 		}
@@ -251,8 +252,13 @@ func (l *Loader) expectState() error {
 func (l *Loader) printNextStates() string {
 	ss := strings.Builder{}
 	ss.WriteRune('{')
+	idx := 0
 	for state := range l.nextStates {
+		idx++
 		ss.WriteString(stateStrings[state])
+		if idx < len(l.nextStates) {
+			ss.WriteString(", ")
+		}
 	}
 	ss.WriteRune('}')
 	return ss.String()
