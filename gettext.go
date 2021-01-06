@@ -2,6 +2,7 @@ package gogettext
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strconv"
 	"sync"
@@ -211,51 +212,63 @@ func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, n i
 
 	idxObj, err := mc.pluralForms.Evaluate(map[string]interface{}{"n": n})
 	if err != nil {
+		fmt.Println(err)
+		fmt.Println("HERE 0")
 		return fallbackMsgstr
 	}
 
 	idx, ok := idxObj.(int)
 	if !ok {
+		fmt.Println("HERE 1")
 		return fallbackMsgstr
 	}
 
 	if mc.messages == nil {
+		fmt.Println("HERE 2")
 		return fallbackMsgstr
 	}
 
 	msgctxtObj, ok := mc.messages[""]
 	if !ok {
+		fmt.Println("HERE 3")
 		return fallbackMsgstr
 	}
 
 	msgctxtMap, ok := msgctxtObj.(map[string]interface{})
 	if !ok {
+		fmt.Println("HERE 4")
 		return fallbackMsgstr
 	}
 
 	msgidObj, ok := msgctxtMap[fallbackMsgstr]
 	if !ok {
+		fmt.Println("HERE 5")
 		return fallbackMsgstr
 	}
 
 	msgidMap, ok := msgidObj.(map[string]interface{})
 	if !ok {
+		fmt.Println("HERE 6")
 		return fallbackMsgstr
 	}
 
 	msgstrPluralsObj, ok := msgidMap["plurals"]
 	if !ok {
+		fmt.Println("HERE 7")
 		return fallbackMsgstr
 	}
 
 	msgstrPluralsList, ok := msgstrPluralsObj.([]string)
 	if !ok {
+		fmt.Println("HERE 8")
 		return fallbackMsgstr
 	}
 
 	if len(msgstrPluralsList) < idx+1 {
+		fmt.Println("HERE 9")
 		return fallbackMsgstr
 	}
 
+	fmt.Println("HERE 10")
 	return msgstrPluralsList[idx]
 }

@@ -116,3 +116,9 @@ func (t *TestSuite) TestMessageCatalog_Gettext_MsgidMissing() {
 	msgstr := t.mc.Gettext(msgid)
 	t.EqualValues(msgid, msgstr)
 }
+
+func (t *TestSuite) TestMessageCatalog_NGettext_One() {
+	msgid := "%d user likes this."
+	msgstr := t.mc.NGettext(msgid, "plural", 1)
+	t.EqualValues("one", msgstr)
+}
