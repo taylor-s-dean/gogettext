@@ -1,5 +1,6 @@
 package po2json
 
+// PO file format documentation: https://www.gnu.org/software/gettext/manual/html_node/PO-Files.html
 import (
 	"bytes"
 	"errors"
