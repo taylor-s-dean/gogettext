@@ -1,5 +1,6 @@
 package po2json
 
+// PO file format documentation: https://www.gnu.org/software/gettext/manual/html_node/PO-Files.html
 import (
 	"bytes"
 	"errors"
@@ -49,34 +50,36 @@ var (
 	regexHeaderKeyValue = regexp.MustCompile(`([a-zA-Z0-9-]+)\s*:\s*(.*?)\\n`)
 )
 
-type Loader struct {
+type loader struct {
 	key        translationKey
 	state      stateEnum
 	nextStates map[stateEnum]bool
 	poJSON     map[string]interface{}
 }
 
-func (l *Loader) init() {
-	l.state = stateUnspecified
-	l.nextStates = map[stateEnum]bool{stateMsgctxt: true, stateMsgid: true}
-	l.poJSON = map[string]interface{}{}
+func NewLoader() *loader {
+	return &loader{
+		state:      stateUnspecified,
+		nextStates: map[stateEnum]bool{stateMsgctxt: true, stateMsgid: true},
+		poJSON:     map[string]interface{}{},
+	}
 }
 
-func (l *Loader) LoadFile(filePath string) (map[string]interface{}, error) {
+func LoadFile(filePath string) (map[string]interface{}, error) {
 	fileContents, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	return l.LoadBytes(fileContents)
+	return LoadBytes(fileContents)
 }
 
-func (l *Loader) LoadString(fileContents string) (map[string]interface{}, error) {
-	return l.LoadBytes([]byte(fileContents))
+func LoadString(fileContents string) (map[string]interface{}, error) {
+	return LoadBytes([]byte(fileContents))
 }
 
-func (l *Loader) LoadBytes(fileContents []byte) (map[string]interface{}, error) {
-	l.init()
+func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
+	l := NewLoader()
 
 	for _, line := range bytes.Split(fileContents, []byte("\n")) {
 		// Ignore the line if it is a comment.
@@ -200,7 +203,7 @@ func (l *Loader) LoadBytes(fileContents []byte) (map[string]interface{}, error) 
 	return l.poJSON, nil
 }
 
-func (l *Loader) addKeyToJson() error {
+func (l *loader) addKeyToJson() error {
 	msgctxt := l.key.Msgctxt.String()
 	msgid := l.key.Msgid.String()
 	msgstr := l.key.Msgstr.String()
@@ -242,14 +245,14 @@ func (l *Loader) addKeyToJson() error {
 	return nil
 }
 
-func (l *Loader) expectState() error {
+func (l *loader) expectState() error {
 	if !l.nextStates[l.state] {
 		return errors.New(fmt.Sprintf("Invalid .po file. Found %s, expected one of %s.", stateStrings[l.state], l.printNextStates()))
 	}
 	return nil
 }
 
-func (l *Loader) printNextStates() string {
+func (l *loader) printNextStates() string {
 	ss := strings.Builder{}
 	ss.WriteRune('{')
 	idx := 0

@@ -13,7 +13,7 @@ msgstr[1] "few"
 msgstr[2] "many"
 msgstr[3] "other"
 
-msgctxt "This is some context"
+msgctxt "This is some context "
 "about the string."
 msgid "Accept language "
 "%{accept_language} was rejected"

@@ -21,8 +21,7 @@ func TestPO2JSON(t *testing.T) {
 }
 
 func (t *TestSuite) TestLoadFile_Valid() {
-	loader := Loader{}
-	poJSON, err := loader.LoadFile(poFilePath)
+	poJSON, err := LoadFile(poFilePath)
 	t.NoError(err)
 
 	enc := json.NewEncoder(ioutil.Discard)
@@ -35,8 +34,7 @@ func (t *TestSuite) TestLoadString_Valid() {
 	fileContents, err := ioutil.ReadFile(poFilePath)
 	t.NoError(err)
 
-	loader := Loader{}
-	poJSON, err := loader.LoadString(string(fileContents))
+	poJSON, err := LoadString(string(fileContents))
 	t.NoError(err)
 
 	enc := json.NewEncoder(ioutil.Discard)
@@ -45,9 +43,18 @@ func (t *TestSuite) TestLoadString_Valid() {
 	t.NoError(enc.Encode(poJSON))
 }
 
+func (t *TestSuite) TestLoadString_MissingEmptyLine() {
+	_, err := LoadString(`
+msgid "Log in"
+msgstr "Войти"
+msgid "Dialog title"
+msgstr "Войти"
+`)
+	t.Error(err)
+}
+
 func (t *TestSuite) TestLoadString_DuplicateMsgid() {
-	loader := Loader{}
-	_, err := loader.LoadString(`
+	_, err := LoadString(`
 msgid "Log in"
 msgstr "Войти"
 
@@ -58,16 +65,14 @@ msgstr "Войти"
 }
 
 func (t *TestSuite) TestLoadString_MissingMsgid0() {
-	loader := Loader{}
-	_, err := loader.LoadString(`
+	_, err := LoadString(`
 msgstr "Войти"
 `)
 	t.Error(err)
 }
 
 func (t *TestSuite) TestLoadString_MissingMsgid1() {
-	loader := Loader{}
-	_, err := loader.LoadString(`
+	_, err := LoadString(`
 msgctxt "Dialog title"
 msgstr "Войти"
 `)
@@ -75,8 +80,7 @@ msgstr "Войти"
 }
 
 func (t *TestSuite) TestLoadString_DuplicateMsgctxt() {
-	loader := Loader{}
-	_, err := loader.LoadString(`
+	_, err := LoadString(`
 msgctxt "Dialog title"
 msgctxt "Dialog title"
 `)
@@ -89,10 +93,9 @@ func BenchmarkLoadBytes(b *testing.B) {
 		b.FailNow()
 	}
 
-	loader := Loader{}
 	b.ResetTimer()
 
 	for i := 0; i < 100; i++ {
-		loader.LoadBytes(fileContents)
+		LoadBytes(fileContents)
 	}
 }
