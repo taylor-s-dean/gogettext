@@ -1,8 +1,6 @@
-//go:generate goyacc -o parser.go parser.yy
 package pluralsparser
 
 import (
-	// "fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"

@@ -1,3 +1,4 @@
+//go:generate goyacc -o ./plurals-parser/parser.go ./plurals-parser/parser.yy
 package gogettext
 
 import (
@@ -7,7 +8,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/Knetic/govaluate"
+	"github.com/taylor-s-dean/gogettext/plurals-parser"
 	"github.com/taylor-s-dean/gogettext/po2json"
 )
 
@@ -18,7 +19,7 @@ var (
 type MessageCatalog struct {
 	messages    map[string]interface{}
 	mutex       sync.RWMutex
-	pluralForms *govaluate.EvaluableExpression
+	pluralForms string
 	nPlurals    int64
 }
 
@@ -98,10 +99,7 @@ func (mc *MessageCatalog) GetMessages() (map[string]interface{}, error) {
 
 func (mc *MessageCatalog) setPluralForms() error {
 	var err error
-	mc.pluralForms, err = govaluate.NewEvaluableExpression("n==1 ? 0 : 1")
-	if err != nil {
-		return err
-	}
+	mc.pluralForms = "n==1 ? 0 : 1"
 
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
@@ -145,12 +143,7 @@ func (mc *MessageCatalog) setPluralForms() error {
 		return nil
 	}
 
-	pluralForms, err := govaluate.NewEvaluableExpression(matches[2])
-	if err != nil {
-		return err
-	}
-
-	mc.pluralForms = pluralForms
+	mc.pluralForms = matches[2]
 	mc.nPlurals, err = strconv.ParseInt(matches[1], 10, 64)
 
 	if err != nil {
@@ -210,19 +203,8 @@ func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, n i
 		fallbackMsgstr = msgidPlural
 	}
 
-	idxObj, err := mc.pluralForms.Evaluate(map[string]interface{}{"n": n})
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("HERE 0")
-		return fallbackMsgstr
-	}
-
-	idx, ok := idxObj.(int)
-	if !ok {
-		fmt.Println("HERE 1")
-		return fallbackMsgstr
-	}
-
+	idxUint := pluralsparser.Evaluate(mc.pluralForms, uint64(n))
+	idx := int(idxUint)
 	if mc.messages == nil {
 		fmt.Println("HERE 2")
 		return fallbackMsgstr

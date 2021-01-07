@@ -3,6 +3,7 @@
 package pluralsparser
 
 import (
+    "fmt"
     "log"
     "unicode/utf8"
     "strings"
@@ -10,7 +11,8 @@ import (
 )
 
 type driver struct {
-    Result uint64
+    Result    uint64
+    Err       error
     Variables map[string]uint64
 }
 
@@ -286,8 +288,6 @@ func (x *yyLex) next() rune {
 }
 
 func (x *yyLex) Error(s string) {
-	log.Printf("parse error: %s\n", s)
-    log.Printf("%s\n", x.orig)
     ss := strings.Builder{}
     for i := 0; i < x.idx + 1; i++ {
         if x.idx == i {
@@ -296,7 +296,7 @@ func (x *yyLex) Error(s string) {
             ss.WriteRune(' ')
         }
     }
-    log.Printf("%s\n", ss.String())
+    drv.Err = fmt.Errorf("parse error: %s\n%s\n%s\n", s, x.orig, ss.String())
 }
 
 func NewLexer(line []byte) *yyLex {
@@ -310,7 +310,6 @@ func NewLexer(line []byte) *yyLex {
 }
 
 func Evaluate(expression string, n uint64) uint64 {
-    yyErrorVerbose = true
     drv.Variables = map[string]uint64{"n": n}
     drv.Result = 0
 	yyParse(NewLexer([]byte(expression)))
