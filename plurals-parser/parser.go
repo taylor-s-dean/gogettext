@@ -15,15 +15,7 @@ import (
 	"unicode/utf8"
 )
 
-type driver struct {
-	Result    uint64
-	Err       error
-	Variables map[string]uint64
-}
-
-var drv = driver{}
-
-//line ./plurals-parser/parser.yy:22
+//line ./plurals-parser/parser.yy:14
 type yySymType struct {
 	yys int
 	num uint64
@@ -73,15 +65,18 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line ./plurals-parser/parser.yy:167
+//line ./plurals-parser/parser.yy:164
 
 const eof = 0
 
 type yyLex struct {
-	line []byte
-	peek rune
-	idx  int
-	orig []byte
+	line      []byte
+	peek      rune
+	idx       int
+	orig      []byte
+	Result    uint64
+	Variables map[string]uint64
+	Err       error
 }
 
 var isNumber = map[rune]bool{
@@ -206,24 +201,26 @@ func (x *yyLex) Error(s string) {
 			ss.WriteRune(' ')
 		}
 	}
-	drv.Err = fmt.Errorf("parse error: %s\n%s\n%s\n", s, x.orig, ss.String())
+	x.Err = fmt.Errorf("parse error: %s\n%s\n%s\n", s, x.orig, ss.String())
 }
 
-func NewLexer(line []byte) *yyLex {
+func NewLexer(line []byte, n uint64) *yyLex {
 	c, size := utf8.DecodeRune(line)
 	return &yyLex{
-		line: line[size:],
-		peek: c,
-		idx:  -1,
-		orig: line,
+		line:      line[size:],
+		peek:      c,
+		idx:       -1,
+		orig:      line,
+		Result:    0,
+		Variables: map[string]uint64{"n": n},
+		Err:       nil,
 	}
 }
 
-func Evaluate(expression string, n uint64) uint64 {
-	drv.Variables = map[string]uint64{"n": n}
-	drv.Result = 0
-	yyParse(NewLexer([]byte(expression)))
-	return drv.Result
+func Evaluate(expression string, n uint64) (uint64, error) {
+	l := NewLexer([]byte(expression), n)
+	yyParse(l)
+	return l.Result, l.Err
 }
 
 //line yacctab:1
@@ -240,10 +237,10 @@ const yyLast = 56
 var yyAct = [...]int{
 	2, 3, 13, 33, 13, 14, 15, 16, 17, 18,
 	19, 20, 22, 23, 34, 24, 25, 26, 27, 28,
-	29, 30, 31, 32, 13, 12, 1, 14, 15, 16,
+	29, 30, 31, 32, 13, 12, 10, 14, 15, 16,
 	17, 18, 19, 20, 21, 35, 13, 5, 4, 14,
-	15, 16, 17, 18, 19, 10, 9, 8, 13, 6,
-	11, 14, 15, 16, 17, 7,
+	15, 16, 17, 18, 19, 9, 8, 6, 13, 7,
+	11, 14, 15, 16, 17, 1,
 }
 
 var yyPact = [...]int{
@@ -254,13 +251,13 @@ var yyPact = [...]int{
 }
 
 var yyPgo = [...]int{
-	0, 1, 0, 55, 49, 47, 46, 45, 26,
+	0, 55, 1, 0, 49, 47, 46, 45, 26,
 }
 
 var yyR1 = [...]int{
-	0, 8, 2, 2, 3, 4, 5, 5, 5, 5,
-	6, 6, 7, 7, 1, 1, 1, 1, 1, 1,
-	1,
+	0, 1, 3, 3, 4, 5, 6, 6, 6, 6,
+	7, 7, 8, 8, 2, 2, 2, 2, 2, 2,
+	2,
 }
 
 var yyR2 = [...]int{
@@ -270,10 +267,10 @@ var yyR2 = [...]int{
 }
 
 var yyChk = [...]int{
-	-1000, -8, -2, -1, 5, 4, -4, -3, -5, -6,
-	-7, 17, 7, 6, 9, 10, 11, 12, 13, 14,
-	15, 16, -2, -2, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, 18, 8, -2,
+	-1000, -1, -3, -2, 5, 4, -5, -4, -6, -7,
+	-8, 17, 7, 6, 9, 10, 11, 12, 13, 14,
+	15, 16, -3, -3, -2, -2, -2, -2, -2, -2,
+	-2, -2, -2, 18, 8, -3,
 }
 
 var yyDef = [...]int{
@@ -635,13 +632,13 @@ yydefault:
 
 	case 1:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line ./plurals-parser/parser.yy:67
+//line ./plurals-parser/parser.yy:61
 		{
-			drv.Result = yyDollar[1].num
+			yylex.(*yyLex).Result = yyDollar[1].num
 		}
 	case 3:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line ./plurals-parser/parser.yy:72
+//line ./plurals-parser/parser.yy:69
 		{
 			if yyDollar[1].num != 0 {
 				yyVAL.num = yyDollar[3].num
@@ -651,19 +648,19 @@ yydefault:
 		}
 	case 4:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:81
+//line ./plurals-parser/parser.yy:78
 		{
 			yyVAL.num = yyDollar[1].num % yyDollar[3].num
 		}
 	case 5:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:83
+//line ./plurals-parser/parser.yy:80
 		{
 			yyVAL.num = yyDollar[2].num
 		}
 	case 6:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:87
+//line ./plurals-parser/parser.yy:84
 		{
 			if yyDollar[1].num < yyDollar[3].num {
 				yyVAL.num = 1
@@ -673,7 +670,7 @@ yydefault:
 		}
 	case 7:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:95
+//line ./plurals-parser/parser.yy:92
 		{
 			if yyDollar[1].num <= yyDollar[3].num {
 				yyVAL.num = 1
@@ -683,7 +680,7 @@ yydefault:
 		}
 	case 8:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:103
+//line ./plurals-parser/parser.yy:100
 		{
 			if yyDollar[1].num > yyDollar[3].num {
 				yyVAL.num = 1
@@ -693,7 +690,7 @@ yydefault:
 		}
 	case 9:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:111
+//line ./plurals-parser/parser.yy:108
 		{
 			if yyDollar[1].num >= yyDollar[3].num {
 				yyVAL.num = 1
@@ -703,7 +700,7 @@ yydefault:
 		}
 	case 10:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:122
+//line ./plurals-parser/parser.yy:119
 		{
 			if yyDollar[1].num == yyDollar[3].num {
 				yyVAL.num = 1
@@ -713,7 +710,7 @@ yydefault:
 		}
 	case 11:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:130
+//line ./plurals-parser/parser.yy:127
 		{
 			if yyDollar[1].num != yyDollar[3].num {
 				yyVAL.num = 1
@@ -723,7 +720,7 @@ yydefault:
 		}
 	case 12:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:141
+//line ./plurals-parser/parser.yy:138
 		{
 			if yyDollar[1].num != 0 && yyDollar[3].num != 0 {
 				yyVAL.num = 1
@@ -733,7 +730,7 @@ yydefault:
 		}
 	case 13:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:149
+//line ./plurals-parser/parser.yy:146
 		{
 			if yyDollar[1].num != 0 || yyDollar[3].num != 0 {
 				yyVAL.num = 1
@@ -743,9 +740,9 @@ yydefault:
 		}
 	case 15:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line ./plurals-parser/parser.yy:160
+//line ./plurals-parser/parser.yy:157
 		{
-			yyVAL.num = drv.Variables[yyDollar[1].str]
+			yyVAL.num = yylex.(*yyLex).Variables[yyDollar[1].str]
 		}
 	}
 	goto yystack /* stack new state and value */

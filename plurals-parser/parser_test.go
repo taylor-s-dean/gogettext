@@ -17,12 +17,17 @@ func TestPluralsParser(t *testing.T) {
 
 func (t *TestSuite) TestEvaluate() {
 	for _, expression := range testExpressions {
-		require.Exactly(t.T(), expression.Truth, Evaluate(expression.Expression, expression.N))
+		res, err := Evaluate(expression.Expression, expression.N)
+		require.NoError(t.T(), err)
+		require.Exactly(t.T(), expression.Truth, res)
 	}
 }
 
 func BenchmarkEvaluate(b *testing.B) {
-	for _, expression := range testExpressions {
+	for idx, expression := range testExpressions {
+		if idx > 4 {
+			break
+		}
 		Evaluate(expression.Expression, expression.N)
 	}
 }

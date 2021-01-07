@@ -9,14 +9,6 @@ import (
     "strings"
     "strconv"
 )
-
-type driver struct {
-    Result    uint64
-    Err       error
-    Variables map[string]uint64
-}
-
-var drv = driver{}
 %}
 
 %union {
@@ -43,6 +35,7 @@ var drv = driver{}
 ;
 
 %type <num>
+    unit
     expression
     if_statement
     multiplicative
@@ -64,7 +57,11 @@ var drv = driver{}
 
 %%
 
-unit: if_statement  { drv.Result = $1 };
+unit: if_statement
+    {
+        yylex.(*yyLex).Result = $1
+    }
+;
 
 if_statement:
   expression
@@ -157,7 +154,7 @@ logical:
 
 expression:
   tokNUMBER
-| tokIDENTIFIER  { $$ = drv.Variables[$1] }
+| tokIDENTIFIER  { $$ = yylex.(*yyLex).Variables[$1] }
 | associative
 | multiplicative
 | relational
@@ -169,10 +166,13 @@ expression:
 const eof = 0
 
 type yyLex struct {
-	line []byte
-	peek rune
-    idx int
-    orig []byte
+	line      []byte
+	peek      rune
+    idx       int
+    orig      []byte
+    Result    uint64
+    Variables map[string]uint64
+    Err       error
 }
 
 var isNumber = map[rune]bool{
@@ -296,22 +296,24 @@ func (x *yyLex) Error(s string) {
             ss.WriteRune(' ')
         }
     }
-    drv.Err = fmt.Errorf("parse error: %s\n%s\n%s\n", s, x.orig, ss.String())
+    x.Err = fmt.Errorf("parse error: %s\n%s\n%s\n", s, x.orig, ss.String())
 }
 
-func NewLexer(line []byte) *yyLex {
+func NewLexer(line []byte, n uint64) *yyLex {
     c, size := utf8.DecodeRune(line)
     return &yyLex{
         line: line[size:],
         peek: c,
         idx: -1,
         orig: line,
+        Result: 0,
+        Variables: map[string]uint64{"n": n},
+        Err: nil,
     }
 }
 
-func Evaluate(expression string, n uint64) uint64 {
-    drv.Variables = map[string]uint64{"n": n}
-    drv.Result = 0
-	yyParse(NewLexer([]byte(expression)))
-    return drv.Result
+func Evaluate(expression string, n uint64) (uint64, error) {
+    l := NewLexer([]byte(expression), n)
+    yyParse(l)
+    return l.Result, l.Err
 }
