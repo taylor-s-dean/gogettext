@@ -302,17 +302,18 @@ func (x *yyLex) Error(s string) {
 func NewLexer(line []byte, n uint64) *yyLex {
     c, size := utf8.DecodeRune(line)
     return &yyLex{
-        line: line[size:],
-        peek: c,
-        idx: -1,
-        orig: line,
-        Result: 0,
+        line:      line[size:],
+        peek:      c,
+        idx:       -1,
+        orig:      line,
+        Result:    0,
         Variables: map[string]uint64{"n": n},
-        Err: nil,
+        Err:       nil,
     }
 }
 
 func Evaluate(expression string, n uint64) (uint64, error) {
+    yyErrorVerbose = true
     l := NewLexer([]byte(expression), n)
     yyParse(l)
     return l.Result, l.Err

@@ -218,6 +218,7 @@ func NewLexer(line []byte, n uint64) *yyLex {
 }
 
 func Evaluate(expression string, n uint64) (uint64, error) {
+	yyErrorVerbose = true
 	l := NewLexer([]byte(expression), n)
 	yyParse(l)
 	return l.Result, l.Err
