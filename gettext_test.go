@@ -122,3 +122,15 @@ func (t *TestSuite) TestMessageCatalog_NGettext_One() {
 	msgstr := t.mc.NGettext(msgid, "plural", 1)
 	t.EqualValues("one", msgstr)
 }
+
+func (t *TestSuite) TestMessageCatalog_NGettext_Few() {
+	msgid := "%d user likes this."
+	msgstr := t.mc.NGettext(msgid, "plural", 2)
+	t.EqualValues("few", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_NGettext_Many() {
+	msgid := "%d user likes this."
+	msgstr := t.mc.NGettext(msgid, "plural", 5)
+	t.EqualValues("many", msgstr)
+}

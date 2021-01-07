@@ -222,7 +222,7 @@ func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, n i
 		return fallbackMsgstr
 	}
 
-	msgidObj, ok := msgctxtMap[fallbackMsgstr]
+	msgidObj, ok := msgctxtMap[msgidSingular]
 	if !ok {
 		return fallbackMsgstr
 	}
