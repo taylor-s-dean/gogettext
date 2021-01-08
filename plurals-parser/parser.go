@@ -37,6 +37,7 @@ const tokAND = 57357
 const tokOR = 57358
 const tokLPAREN = 57359
 const tokRPAREN = 57360
+const tokINVALID = 57361
 
 var yyToknames = [...]string{
 	"$end",
@@ -57,6 +58,7 @@ var yyToknames = [...]string{
 	"tokOR",
 	"tokLPAREN",
 	"tokRPAREN",
+	"tokINVALID",
 }
 
 var yyStatenames = [...]string{}
@@ -65,7 +67,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line ./plurals-parser/parser.yy:164
+//line ./plurals-parser/parser.yy:165
 
 const eof = 0
 
@@ -148,7 +150,7 @@ func (x *yyLex) Lex(yylval *yySymType) (res int) {
 			return tokIDENTIFIER
 		case isWhitespace[c]:
 		default:
-			log.Printf("unrecognized character %q", c)
+			return tokINVALID
 		}
 	}
 }
@@ -287,7 +289,7 @@ var yyTok1 = [...]int{
 
 var yyTok2 = [...]int{
 	2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-	12, 13, 14, 15, 16, 17, 18,
+	12, 13, 14, 15, 16, 17, 18, 19,
 }
 
 var yyTok3 = [...]int{
@@ -633,13 +635,13 @@ yydefault:
 
 	case 1:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line ./plurals-parser/parser.yy:61
+//line ./plurals-parser/parser.yy:62
 		{
 			yylex.(*yyLex).Result = yyDollar[1].num
 		}
 	case 3:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line ./plurals-parser/parser.yy:69
+//line ./plurals-parser/parser.yy:70
 		{
 			if yyDollar[1].num != 0 {
 				yyVAL.num = yyDollar[3].num
@@ -649,19 +651,19 @@ yydefault:
 		}
 	case 4:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:78
+//line ./plurals-parser/parser.yy:79
 		{
 			yyVAL.num = yyDollar[1].num % yyDollar[3].num
 		}
 	case 5:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:80
+//line ./plurals-parser/parser.yy:81
 		{
 			yyVAL.num = yyDollar[2].num
 		}
 	case 6:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:84
+//line ./plurals-parser/parser.yy:85
 		{
 			if yyDollar[1].num < yyDollar[3].num {
 				yyVAL.num = 1
@@ -671,7 +673,7 @@ yydefault:
 		}
 	case 7:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:92
+//line ./plurals-parser/parser.yy:93
 		{
 			if yyDollar[1].num <= yyDollar[3].num {
 				yyVAL.num = 1
@@ -681,7 +683,7 @@ yydefault:
 		}
 	case 8:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:100
+//line ./plurals-parser/parser.yy:101
 		{
 			if yyDollar[1].num > yyDollar[3].num {
 				yyVAL.num = 1
@@ -691,7 +693,7 @@ yydefault:
 		}
 	case 9:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:108
+//line ./plurals-parser/parser.yy:109
 		{
 			if yyDollar[1].num >= yyDollar[3].num {
 				yyVAL.num = 1
@@ -701,7 +703,7 @@ yydefault:
 		}
 	case 10:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:119
+//line ./plurals-parser/parser.yy:120
 		{
 			if yyDollar[1].num == yyDollar[3].num {
 				yyVAL.num = 1
@@ -711,7 +713,7 @@ yydefault:
 		}
 	case 11:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:127
+//line ./plurals-parser/parser.yy:128
 		{
 			if yyDollar[1].num != yyDollar[3].num {
 				yyVAL.num = 1
@@ -721,7 +723,7 @@ yydefault:
 		}
 	case 12:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:138
+//line ./plurals-parser/parser.yy:139
 		{
 			if yyDollar[1].num != 0 && yyDollar[3].num != 0 {
 				yyVAL.num = 1
@@ -731,7 +733,7 @@ yydefault:
 		}
 	case 13:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:146
+//line ./plurals-parser/parser.yy:147
 		{
 			if yyDollar[1].num != 0 || yyDollar[3].num != 0 {
 				yyVAL.num = 1
@@ -741,7 +743,7 @@ yydefault:
 		}
 	case 15:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line ./plurals-parser/parser.yy:157
+//line ./plurals-parser/parser.yy:158
 		{
 			yyVAL.num = yylex.(*yyLex).Variables[yyDollar[1].str]
 		}

@@ -1,7 +1,9 @@
 package gogettext
 
 import (
+	"encoding/json"
 	"io/ioutil"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -11,7 +13,7 @@ const (
 	poFilePath = "testdata/test.po"
 )
 
-/*
+var messagesJSON = []byte(`
 {
     "": {
         "": {
@@ -60,15 +62,12 @@ const (
         }
     }
 }
-*/
+`)
 
 type TestSuite struct {
 	suite.Suite
-	mc *MessageCatalog
-}
-
-func TestGettext(t *testing.T) {
-	suite.Run(t, new(TestSuite))
+	mc       *MessageCatalog
+	messages map[string]interface{}
 }
 
 func (t *TestSuite) SetupSuite() {
@@ -76,15 +75,29 @@ func (t *TestSuite) SetupSuite() {
 	t.mc, err = NewMessageCatalogFromFile(poFilePath)
 	t.NoError(err)
 	t.NotNil(t.mc)
+
+	err = json.Unmarshal(messagesJSON, &t.messages)
+	t.NoError(err)
+	t.NotNil(t.messages)
 }
 
-func (t *TestSuite) TestNewMessageCatalogFromFile() {
+func TestGettext(t *testing.T) {
+	suite.Run(t, new(TestSuite))
+}
+
+func (t *TestSuite) TestNewMessageCatalogFromFile_Valid() {
 	mc, err := NewMessageCatalogFromFile(poFilePath)
 	t.NoError(err)
 	t.NotNil(mc)
 }
 
-func (t *TestSuite) TestNewMessageCatalogFromString() {
+func (t *TestSuite) TestNewMessageCatalogFromFile_FileNotFound() {
+	mc, err := NewMessageCatalogFromFile("./not-a-real-file.po")
+	t.Error(err)
+	t.Nil(mc)
+}
+
+func (t *TestSuite) TestNewMessageCatalogFromString_Valid() {
 	fileContents, err := ioutil.ReadFile(poFilePath)
 	t.NoError(err)
 	mc, err := NewMessageCatalogFromString(string(fileContents))
@@ -92,7 +105,26 @@ func (t *TestSuite) TestNewMessageCatalogFromString() {
 	t.NotNil(mc)
 }
 
-func (t *TestSuite) TestNewMessageCatalogFromBytes() {
+func (t *TestSuite) TestNewMessageCatalogFromString_InvalidString() {
+	mc, err := NewMessageCatalogFromString(`
+msgid ""
+msgid ""
+`)
+	t.Error(err)
+	t.Nil(mc)
+}
+
+func (t *TestSuite) TestNewMessageCatalogFromString_InvalidPluralForms() {
+	mc, err := NewMessageCatalogFromString(`
+msgid ""
+msgstr ""
+"Plural-Forms: nplurals=3; plural=(n!==1 ? 1 : 0);\n"
+`)
+	t.Error(err)
+	t.Nil(mc)
+}
+
+func (t *TestSuite) TestNewMessageCatalogFromBytes_Valid() {
 	fileContents, err := ioutil.ReadFile(poFilePath)
 	t.NoError(err)
 	mc, err := NewMessageCatalogFromBytes(fileContents)
@@ -100,37 +132,293 @@ func (t *TestSuite) TestNewMessageCatalogFromBytes() {
 	t.NotNil(mc)
 }
 
-func (t *TestSuite) TestMessageCatalog_GetMessages() {
+func (t *TestSuite) TestNewMessageCatalogFromString_InvalidBytes() {
+	mc, err := NewMessageCatalogFromBytes([]byte(`
+msgid ""
+msgid ""
+`))
+	t.Error(err)
+	t.Nil(mc)
+}
+
+func (t *TestSuite) TestNewMessageCatalogFromBytes_InvalidPluralForms() {
+	mc, err := NewMessageCatalogFromBytes([]byte(`
+msgid ""
+msgstr ""
+"Plural-Forms: nplurals=3; plural=(n!==1 ? 1 : 0);\n"
+`))
+	t.Error(err)
+	t.Nil(mc)
+}
+
+func (t *TestSuite) TestMessageCatalog_GetMessages_Valid() {
 	messages, err := t.mc.GetMessages()
 	t.NoError(err)
 	t.NotNil(messages)
+	t.True(reflect.DeepEqual(t.messages, messages))
 }
 
-func (t *TestSuite) TestMessageCatalog_Gettext_MsgidExists() {
+func (t *TestSuite) TestMessageCatalog_setPluralForms_Valid() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`
+{
+	"": {
+		"": {
+			"Plural-Forms": "nplurals=2; plural=(n==1 || n==11 ? 0 : 1);"
+		}
+	}
+}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.NoError(err)
+	t.Equal("(n==1 || n==11 ? 0 : 1)", mc.pluralForms)
+}
+
+func (t *TestSuite) TestMessageCatalog_setPluralForms_NilMessageCatalog() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = nil
+	err = mc.setPluralForms()
+	t.EqualError(err, ErrorNilMessageCatalog.Error())
+}
+
+func (t *TestSuite) TestMessageCatalog_setPluralForms_NoPluralForms() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"": {"": {"": ""}}}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.NoError(err)
+	t.Equal(mc.pluralForms, defaultPluralForms)
+}
+
+func (t *TestSuite) TestMessageCatalog_setPluralForms_PluralsTypeAssertion() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"": {"": {"Plural-Forms": 2}}}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.EqualError(err, ErrorPluralsTypeAssertionFailed.Error())
+}
+
+func (t *TestSuite) TestMessageCatalog_setPluralForms_EmptyPluralFormsValue() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"": {"": {"Plural-Forms": ""}}}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.Equal(mc.pluralForms, defaultPluralForms)
+}
+
+func (t *TestSuite) TestMessageCatalog_setPluralForms_InvalidPluralForms() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"": {"": {"Plural-Forms": "nplurals=2; plural=());"}}}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.Error(err)
+}
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_Valid() {
+	msgidMap, err := t.mc.getMsgidMap("", "")
+	t.NoError(err)
+	t.NotNil(msgidMap)
+	t.True(reflect.DeepEqual(t.messages[""].(map[string]interface{})[""].(map[string]interface{}), msgidMap))
+}
+
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_NilMessageCatalog() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = nil
+	msgidMap, err := mc.getMsgidMap("", "")
+	t.EqualError(err, ErrorNilMessageCatalog.Error())
+	t.Nil(msgidMap)
+}
+
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgctxtNotFound() {
+	msgidMap, err := t.mc.getMsgidMap("bob", "")
+	t.EqualError(err, ErrorMsgctxtNotFound.Error())
+	t.Nil(msgidMap)
+}
+
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgidNotFound() {
+	msgidMap, err := t.mc.getMsgidMap("", "bob")
+	t.EqualError(err, ErrorMsgidNotFound.Error())
+	t.Nil(msgidMap)
+}
+
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgctxtTypeAssertion() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":""}`), &mc.messages)
+	t.NoError(err)
+	msgidMap, err := mc.getMsgidMap("", "")
+	t.EqualError(err, ErrorMsgctxtTypeAssertionFailed.Error())
+	t.Nil(msgidMap)
+}
+
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgidTypeAssertion() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":{"":""}}`), &mc.messages)
+	t.NoError(err)
+	msgidMap, err := mc.getMsgidMap("", "")
+	t.EqualError(err, ErrorMsgidTypeAssertionFailed.Error())
+	t.Nil(msgidMap)
+}
+
+func (t *TestSuite) TestMessageCatalog_Gettext_Valid() {
 	msgstr := t.mc.Gettext("One piggy went to the market.")
-	t.EqualValues("Одна свинья ушла на рынок.", msgstr)
+	t.Equal("Одна свинья ушла на рынок.", msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_Gettext_MsgidMissing() {
+func (t *TestSuite) TestMessageCatalog_TryGettext_MsgidNotFound() {
 	msgid := "This msgid doesn't exist."
-	msgstr := t.mc.Gettext(msgid)
-	t.EqualValues(msgid, msgstr)
+	msgstr, err := t.mc.TryGettext(msgid)
+	t.EqualError(err, ErrorMsgidNotFound.Error())
+	t.Equal(msgid, msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_NGettext_One() {
-	msgid := "%d user likes this."
-	msgstr := t.mc.NGettext(msgid, "plural", 1)
-	t.EqualValues("one", msgstr)
+func (t *TestSuite) TestMessageCatalog_TryGettext_TranslationNotFound() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":{"":{"":""}}}`), &mc.messages)
+	t.NoError(err)
+	msgstr, err := mc.TryGettext("")
+	t.EqualError(err, ErrorTranslationNotFound.Error())
+	t.Equal("", msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_NGettext_Few() {
+func (t *TestSuite) TestMessageCatalog_TryGettext_TranslationTypeAssertion() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":{"":{"translation":2}}}`), &mc.messages)
+	t.NoError(err)
+	msgstr, err := mc.TryGettext("")
+	t.EqualError(err, ErrorTranslationTypeAssertionFailed.Error())
+	t.Equal("", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_NGettext_Valid() {
 	msgid := "%d user likes this."
 	msgstr := t.mc.NGettext(msgid, "plural", 2)
-	t.EqualValues("few", msgstr)
+	t.Equal("few", msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_NGettext_Many() {
-	msgid := "%d user likes this."
-	msgstr := t.mc.NGettext(msgid, "plural", 5)
-	t.EqualValues("many", msgstr)
+func (t *TestSuite) TestMessageCatalog_TryNGettext_InvalidPluralForms() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":{"":{"Plural-Forms": "nplurals=1; plural=(();"}}}`), &mc.messages)
+	t.NoError(err)
+	msgstr, err := mc.TryNGettext("singular", "plural", 1)
+	t.Error(err)
+	t.Equal("singular", msgstr)
+	msgstr, err = mc.TryNGettext("singular", "plural", 2)
+	t.Error(err)
+	t.Equal("plural", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryNGettext_PluralNotFound() {
+	msgid := "One piggy went to the market."
+	msgstr, err := t.mc.TryNGettext(msgid, "plural", 1)
+	t.EqualError(err, ErrorPluralNotFound.Error())
+	t.Equal(msgid, msgstr)
+	msgstr, err = t.mc.TryNGettext(msgid, "plural", 2)
+	t.EqualError(err, ErrorPluralNotFound.Error())
+	t.Equal("plural", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryNGettext_PluralsTypeAssertion() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":{"singular":{"plurals":1}}}`), &mc.messages)
+	t.NoError(err)
+	msgstr, err := mc.TryNGettext("singular", "plural", 1)
+	t.EqualError(err, ErrorPluralsTypeAssertionFailed.Error())
+	t.Equal("singular", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryNGettext_PluralIndexOutOfBounds() {
+	mc, err := NewMessageCatalogFromString(`
+msgid ""
+msgstr ""
+"Plural-Forms: nplurals=2; plural=(n==1 ? 0 : 1)"
+
+msgid "singular"
+msgid_plural "plural"
+msgstr[0] "zero"
+`)
+	t.NoError(err)
+	t.NotNil(mc)
+	msgstr, err := mc.TryNGettext("singular", "plural", 1)
+	t.NoError(err)
+	t.Equal("zero", msgstr)
+	msgstr, err = mc.TryNGettext("singular", "plural", 2)
+	t.EqualError(err, ErrorPluralsIndexOutOfBounds.Error())
+	t.Equal("plural", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_PGettext_Valid() {
+	msgstr := t.mc.PGettext("Button label", "Log in")
+	t.Equal("Войти", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryPGettext_MissingMsgctxt() {
+	msgid := "Log in"
+	msgstr, err := t.mc.TryPGettext("Butt", msgid)
+	t.EqualError(err, ErrorMsgctxtNotFound.Error())
+	t.Equal(msgid, msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryPGettext_TranslationNotFound() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":{"test":{}}}`), &mc.messages)
+	t.NoError(err)
+	msgstr, err := mc.TryPGettext("", "test")
+	t.EqualError(err, ErrorTranslationNotFound.Error())
+	t.Equal("test", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryPGettext_TranslationTypeAssertion() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":{"test":{"translation":1}}}`), &mc.messages)
+	t.NoError(err)
+	msgstr, err := mc.TryPGettext("", "test")
+	t.EqualError(err, ErrorTranslationTypeAssertionFailed.Error())
+	t.Equal("test", msgstr)
 }

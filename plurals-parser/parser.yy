@@ -32,6 +32,7 @@ import (
     tokOR
     tokLPAREN
     tokRPAREN
+    tokINVALID
 ;
 
 %type <num>
@@ -244,7 +245,7 @@ func (x *yyLex) Lex(yylval *yySymType) (res int) {
             return tokIDENTIFIER
 		case isWhitespace[c]:
 		default:
-			log.Printf("unrecognized character %q", c)
+            return tokINVALID
 		}
 	}
 }
