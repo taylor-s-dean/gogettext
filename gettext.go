@@ -24,10 +24,10 @@ const (
 	ErrorPluralNotFound                 = Error("plurals not found")
 	ErrorNilMessageCatalog              = Error("message catalog is nil")
 	ErrorMsgctxtTypeAssertionFailed     = Error("message context type assertion failed")
-	ErrorMsgidTypeAssertionFailed       = Error("message context type assertion failed")
-	ErrorPluralsTypeAssertionFailed     = Error("message context type assertion failed")
-	ErrorTranslationTypeAssertionFailed = Error("message context type assertion failed")
-	ErrorPluralIndexOutOfBounds         = Error("plural index out of bounds")
+	ErrorMsgidTypeAssertionFailed       = Error("message identifier type assertion failed")
+	ErrorPluralsTypeAssertionFailed     = Error("plurals type assertion failed")
+	ErrorTranslationTypeAssertionFailed = Error("translation type assertion failed")
+	ErrorPluralsIndexOutOfBounds        = Error("plural index out of bounds")
 
 	defaultPluralForms = "n==1 ? 0 : 1"
 )
@@ -270,7 +270,7 @@ func (mc *MessageCatalog) TryNGettext(msgidSingular string, msgidPlural string, 
 
 	idx := int(idxUint)
 	if idx >= len(msgstrPluralsList) {
-		return fallbackMsgstr, ErrorPluralIndexOutOfBounds
+		return fallbackMsgstr, ErrorPluralsIndexOutOfBounds
 	}
 
 	return msgstrPluralsList[idx], nil
