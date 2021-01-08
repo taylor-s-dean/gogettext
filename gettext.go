@@ -207,11 +207,16 @@ func (mc *MessageCatalog) getMsgidObject(msgctxt string, msgid string) (map[stri
 	return msgidMap, nil
 }
 
+// Gettext returns the msgstr associated with the msgid.
+// This method returns the msgid if the corresponding msgstr cannot be found.
 func (mc *MessageCatalog) Gettext(msgid string) string {
 	msgstr, _ := mc.TryGettext(msgid)
 	return msgstr
 }
 
+// TryGettext returns the msgstr associated with the msgid.
+// This method returns msgid and an error if the corresponding msgstr cannot be
+// found.
 func (mc *MessageCatalog) TryGettext(msgid string) (string, error) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
@@ -234,21 +239,41 @@ func (mc *MessageCatalog) TryGettext(msgid string) (string, error) {
 	return msgstrStr, nil
 }
 
-func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, n int) string {
-	msgstr, _ := mc.TryNGettext(msgidSingular, msgidPlural, n)
+// NGettext returns the msgid_plural associate with the given msgid and
+// quantity.
+// The specific plural returned is determined by evaluating the Plural-Forms
+// header given the specified quantity.
+// The Plural-Forms falls back to `plural=(n==1 ? 0 : 1)` in the event that
+// no Plural-Forms header was provided in the .po file OR evaluation of the
+// plural failed.
+// In the case of plural evaluation failure or failure to find the associated
+// msgstr, msgidSingular is returned if quantity == 1, otherwise
+// msgidPlural is returned.
+func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, quantity int) string {
+	msgstr, _ := mc.TryNGettext(msgidSingular, msgidPlural, quantity)
 	return msgstr
 }
 
-func (mc *MessageCatalog) TryNGettext(msgidSingular string, msgidPlural string, n int) (string, error) {
+// TryNGettext returns the msgid_plural associate with the given msgid and
+// quantity.
+// The specific plural returned is determined by evaluating the Plural-Forms
+// header given the specified quantity.
+// The Plural-Forms falls back to `plural=(n==1 ? 0 : 1)` in the event that
+// no Plural-Forms header was provided in the .po file OR evaluation of the
+// plural failed.
+// In the case of plural evaluation failure or failure to find the associated
+// msgstr, msgidSingular is returned if quantity == 1, otherwise
+// msgidPlural is returned. An error is also returned in these cases.
+func (mc *MessageCatalog) TryNGettext(msgidSingular string, msgidPlural string, quantity int) (string, error) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
 	fallbackMsgstr := msgidSingular
-	if n != 1 {
+	if quantity != 1 {
 		fallbackMsgstr = msgidPlural
 	}
 
-	idxUint, err := pluralsparser.Evaluate(mc.pluralForms, uint64(n))
+	idxUint, err := pluralsparser.Evaluate(mc.pluralForms, uint64(quantity))
 	if err != nil {
 		return fallbackMsgstr, err
 	}
@@ -269,18 +294,26 @@ func (mc *MessageCatalog) TryNGettext(msgidSingular string, msgidPlural string, 
 	}
 
 	idx := int(idxUint)
-	if len(msgstrPluralsList) < idx+1 {
+	if idx >= len(msgstrPluralsList) {
 		return fallbackMsgstr, ErrorPluralIndexOutOfBounds
 	}
 
 	return msgstrPluralsList[idx], nil
 }
 
+// PGettext returns the Particular msgstr associated with the msgctxt
+// and msgid.
+// This method will return the msgid if no corresponding msgstr can be
+// found.
 func (mc *MessageCatalog) PGettext(msgctxt string, msgid string) string {
 	msgstr, _ := mc.TryPGettext(msgctxt, msgid)
 	return msgstr
 }
 
+// TryPGettext returns the Particular msgstr associated with the msgctxt
+// and msgid.
+// This method will return the msgid and an error if no corresponding msgstr
+// can be found.
 func (mc *MessageCatalog) TryPGettext(msgctxt string, msgid string) (string, error) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()

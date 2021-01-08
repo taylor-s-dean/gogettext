@@ -1,7 +1,9 @@
 package gogettext
 
 import (
+	"encoding/json"
 	"io/ioutil"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -11,7 +13,7 @@ const (
 	poFilePath = "testdata/test.po"
 )
 
-/*
+var messagesJSON = []byte(`
 {
     "": {
         "": {
@@ -60,15 +62,12 @@ const (
         }
     }
 }
-*/
+`)
 
 type TestSuite struct {
 	suite.Suite
-	mc *MessageCatalog
-}
-
-func TestGettext(t *testing.T) {
-	suite.Run(t, new(TestSuite))
+	mc       *MessageCatalog
+	messages map[string]interface{}
 }
 
 func (t *TestSuite) SetupSuite() {
@@ -76,6 +75,14 @@ func (t *TestSuite) SetupSuite() {
 	t.mc, err = NewMessageCatalogFromFile(poFilePath)
 	t.NoError(err)
 	t.NotNil(t.mc)
+
+	err = json.Unmarshal(messagesJSON, &t.messages)
+	t.NoError(err)
+	t.NotNil(t.messages)
+}
+
+func TestGettext(t *testing.T) {
+	suite.Run(t, new(TestSuite))
 }
 
 func (t *TestSuite) TestNewMessageCatalogFromFile() {
@@ -92,6 +99,16 @@ func (t *TestSuite) TestNewMessageCatalogFromString() {
 	t.NotNil(mc)
 }
 
+func (t *TestSuite) TestNewMessageCatalogFromString_InvalidPluralForms() {
+	mc, err := NewMessageCatalogFromString(`
+msgid ""
+msgstr ""
+"Plural-Forms: nplurals=3; plural=(n!==1 ? 1 : 0);\n"
+`)
+	t.Error(err)
+	t.Nil(mc)
+}
+
 func (t *TestSuite) TestNewMessageCatalogFromBytes() {
 	fileContents, err := ioutil.ReadFile(poFilePath)
 	t.NoError(err)
@@ -104,6 +121,7 @@ func (t *TestSuite) TestMessageCatalog_GetMessages() {
 	messages, err := t.mc.GetMessages()
 	t.NoError(err)
 	t.NotNil(messages)
+	t.True(reflect.DeepEqual(t.messages, messages))
 }
 
 func (t *TestSuite) TestMessageCatalog_Gettext_MsgidExists() {
@@ -136,23 +154,14 @@ func (t *TestSuite) TestMessageCatalog_NGettext_Many() {
 	t.EqualValues("many", msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_NGettext_InvalidPluralForms() {
-	mc, err := NewMessageCatalogFromString(`
-msgid ""
-msgstr ""
-"Plural-Forms: nplurals=3; plural=(n!==1 ? 1 : 0);\n"
-`)
-	t.Error(err)
-	t.Nil(mc)
-}
-
 func (t *TestSuite) TestMessageCatalog_PGettext_Valid() {
 	msgstr := t.mc.PGettext("Button label", "Log in")
 	t.EqualValues("Войти", msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_PGettext_MissingMsgctxt() {
-	msgstr, err := t.mc.TryPGettext("Butt", "Log in")
+func (t *TestSuite) TestMessageCatalog_TryPGettext_MissingMsgctxt() {
+	msgid := "Log in"
+	msgstr, err := t.mc.TryPGettext("Butt", msgid)
 	t.EqualError(err, ErrorMsgctxtNotFound.Error())
-	t.EqualValues("Log in", msgstr)
+	t.EqualValues(msgid, msgstr)
 }
