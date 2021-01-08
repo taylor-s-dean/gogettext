@@ -21,4 +21,4 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: go generate && go test ./... -cover | column --table
+        run: go test ./... -cover | column --table
