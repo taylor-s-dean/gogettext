@@ -4,7 +4,6 @@ package gogettext
 import (
 	"encoding/json"
 	"regexp"
-	"strconv"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -29,17 +28,18 @@ const (
 	ErrorPluralsTypeAssertionFailed     = Error("message context type assertion failed")
 	ErrorTranslationTypeAssertionFailed = Error("message context type assertion failed")
 	ErrorPluralIndexOutOfBounds         = Error("plural index out of bounds")
+
+	defaultPluralForms = "n==1 ? 0 : 1"
 )
 
 var (
-	pluralFormsRegex = regexp.MustCompile(`nplurals\s*=\s*(\d+);\s*plural\s*=\s*([n0-9%!=&|?:><+() \-]+);`)
+	pluralFormsRegex = regexp.MustCompile(`nplurals\s*=\s*\d+;\s*plural\s*=\s*([n0-9%!=&|?:><+() \-]+);`)
 )
 
 type MessageCatalog struct {
 	messages    map[string]interface{}
 	mutex       sync.RWMutex
 	pluralForms string
-	nPlurals    int64
 }
 
 func NewMessageCatalogFromFile(filePath string) (*MessageCatalog, error) {
@@ -118,7 +118,7 @@ func (mc *MessageCatalog) GetMessages() (map[string]interface{}, error) {
 
 func (mc *MessageCatalog) setPluralForms() error {
 	var err error
-	mc.pluralForms = "n==1 ? 0 : 1"
+	mc.pluralForms = defaultPluralForms
 
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
@@ -135,7 +135,7 @@ func (mc *MessageCatalog) setPluralForms() error {
 
 	pluralFormsStr, ok := pluralFormsObj.(string)
 	if !ok {
-		return ErrorTranslationTypeAssertionFailed
+		return ErrorPluralsTypeAssertionFailed
 	}
 
 	matches := pluralFormsRegex.FindStringSubmatch(pluralFormsStr)
@@ -143,14 +143,8 @@ func (mc *MessageCatalog) setPluralForms() error {
 		return nil
 	}
 
-	mc.pluralForms = matches[2]
+	mc.pluralForms = matches[1]
 	if _, err := pluralsparser.Evaluate(mc.pluralForms, 0); err != nil {
-		return err
-	}
-
-	mc.nPlurals, err = strconv.ParseInt(matches[1], 10, 64)
-
-	if err != nil {
 		return err
 	}
 

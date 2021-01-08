@@ -129,11 +129,19 @@ func (t *TestSuite) TestMessageCatalog_setPluralForms_Valid() {
 	t.NoError(err)
 	t.NotNil(mc)
 	mc.messages = map[string]interface{}{}
-	err = json.Unmarshal([]byte(`{"": {"": {"Plural-Forms": "(n==1 ? 0 : 1)"}}}`), &mc.messages)
+	err = json.Unmarshal([]byte(`
+{
+	"": {
+		"": {
+			"Plural-Forms": "nplurals=2; plural=(n==1 || n==11 ? 0 : 1);"
+		}
+	}
+}`), &mc.messages)
 	t.NoError(err)
 	t.NotNil(mc)
 	err = mc.setPluralForms()
 	t.NoError(err)
+	t.Equal("(n==1 || n==11 ? 0 : 1)", mc.pluralForms)
 }
 
 func (t *TestSuite) TestMessageCatalog_setPluralForms_NilMessageCatalog() {
@@ -145,6 +153,54 @@ func (t *TestSuite) TestMessageCatalog_setPluralForms_NilMessageCatalog() {
 	t.EqualError(err, ErrorNilMessageCatalog.Error())
 }
 
+func (t *TestSuite) TestMessageCatalog_setPluralForms_NoPluralForms() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"": {"": {"": ""}}}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.NoError(err)
+	t.Equal(mc.pluralForms, defaultPluralForms)
+}
+
+func (t *TestSuite) TestMessageCatalog_setPluralForms_PluralsTypeAssertion() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"": {"": {"Plural-Forms": 2}}}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.EqualError(err, ErrorPluralsTypeAssertionFailed.Error())
+}
+
+func (t *TestSuite) TestMessageCatalog_setPluralForms_EmptyPluralFormsValue() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"": {"": {"Plural-Forms": ""}}}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.Equal(mc.pluralForms, defaultPluralForms)
+}
+
+func (t *TestSuite) TestMessageCatalog_setPluralForms_InvalidPluralForms() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"": {"": {"Plural-Forms": "nplurals=2; plural=());"}}}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.Error(err)
+}
 func (t *TestSuite) TestMessageCatalog_getMsgidMap_Valid() {
 	msgidMap, err := t.mc.getMsgidMap("", "")
 	t.NoError(err)
