@@ -124,44 +124,112 @@ func (t *TestSuite) TestMessageCatalog_GetMessages() {
 	t.True(reflect.DeepEqual(t.messages, messages))
 }
 
-func (t *TestSuite) TestMessageCatalog_Gettext_MsgidExists() {
-	msgstr := t.mc.Gettext("One piggy went to the market.")
-	t.EqualValues("Одна свинья ушла на рынок.", msgstr)
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_NilMessageCatalog() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = nil
+	msgidMap, err := mc.getMsgidMap("", "")
+	t.EqualError(err, ErrorNilMessageCatalog.Error())
+	t.Nil(msgidMap)
 }
 
-func (t *TestSuite) TestMessageCatalog_Gettext_MsgidMissing() {
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgctxtNotFound() {
+	msgidMap, err := t.mc.getMsgidMap("bob", "")
+	t.EqualError(err, ErrorMsgctxtNotFound.Error())
+	t.Nil(msgidMap)
+}
+
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgidNotFound() {
+	msgidMap, err := t.mc.getMsgidMap("", "bob")
+	t.EqualError(err, ErrorMsgidNotFound.Error())
+	t.Nil(msgidMap)
+}
+
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgctxtTypeAssertion() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":""}`), &mc.messages)
+	t.NoError(err)
+	msgidMap, err := mc.getMsgidMap("", "")
+	t.EqualError(err, ErrorMsgctxtTypeAssertionFailed.Error())
+	t.Nil(msgidMap)
+}
+
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgidTypeAssertion() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":{"":""}}`), &mc.messages)
+	t.NoError(err)
+	msgidMap, err := mc.getMsgidMap("", "")
+	t.EqualError(err, ErrorMsgctxtTypeAssertionFailed.Error())
+	t.Nil(msgidMap)
+}
+
+func (t *TestSuite) TestMessageCatalog_Gettext_Valid() {
+	msgstr := t.mc.Gettext("One piggy went to the market.")
+	t.Equal("Одна свинья ушла на рынок.", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryGettext_MsgidNotFound() {
 	msgid := "This msgid doesn't exist."
 	msgstr, err := t.mc.TryGettext(msgid)
 	t.EqualError(err, ErrorMsgidNotFound.Error())
-	t.EqualValues(msgid, msgstr)
+	t.Equal(msgid, msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryGettext_TranslationNotFound() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"":{"":{"":""}}}`), &mc.messages)
+	t.NoError(err)
+	msgidMap, err := mc.TryGettext("")
+	t.EqualError(err, ErrorTranslationNotFound.Error())
+	t.Equal("", msgidMap)
 }
 
 func (t *TestSuite) TestMessageCatalog_NGettext_One() {
 	msgid := "%d user likes this."
 	msgstr := t.mc.NGettext(msgid, "plural", 1)
-	t.EqualValues("one", msgstr)
+	t.Equal("one", msgstr)
 }
 
 func (t *TestSuite) TestMessageCatalog_NGettext_Few() {
 	msgid := "%d user likes this."
 	msgstr := t.mc.NGettext(msgid, "plural", 2)
-	t.EqualValues("few", msgstr)
+	t.Equal("few", msgstr)
 }
 
 func (t *TestSuite) TestMessageCatalog_NGettext_Many() {
 	msgid := "%d user likes this."
 	msgstr := t.mc.NGettext(msgid, "plural", 5)
-	t.EqualValues("many", msgstr)
+	t.Equal("many", msgstr)
 }
 
 func (t *TestSuite) TestMessageCatalog_PGettext_Valid() {
 	msgstr := t.mc.PGettext("Button label", "Log in")
-	t.EqualValues("Войти", msgstr)
+	t.Equal("Войти", msgstr)
 }
 
 func (t *TestSuite) TestMessageCatalog_TryPGettext_MissingMsgctxt() {
 	msgid := "Log in"
 	msgstr, err := t.mc.TryPGettext("Butt", msgid)
 	t.EqualError(err, ErrorMsgctxtNotFound.Error())
-	t.EqualValues(msgid, msgstr)
+	t.Equal(msgid, msgstr)
 }
+
+// func (t *TestSuite) TestMessageCatalog_TryPGettext_MissingMsgid() {
+// 	mc, err := NewMessageCatalogFromBytes([]byte(""))
+// 	t.NoError(err)
+// 	t.NotNil(mc)
+// 	// msgid := "Log"
+// 	// msgstr, err := t.mc.TryPGettext("Button label", msgid)
+// 	// t.EqualError(err, ErrorMsgidNotFound.Error())
+// 	// t.Equal(msgid, msgstr)
+// }

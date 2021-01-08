@@ -176,7 +176,7 @@ func (mc *MessageCatalog) setPluralForms() error {
 	return nil
 }
 
-func (mc *MessageCatalog) getMsgidObject(msgctxt string, msgid string) (map[string]interface{}, error) {
+func (mc *MessageCatalog) getMsgidMap(msgctxt string, msgid string) (map[string]interface{}, error) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
@@ -221,7 +221,7 @@ func (mc *MessageCatalog) TryGettext(msgid string) (string, error) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
-	msgidMap, err := mc.getMsgidObject("", msgid)
+	msgidMap, err := mc.getMsgidMap("", msgid)
 	if err != nil {
 		return msgid, err
 	}
@@ -278,7 +278,7 @@ func (mc *MessageCatalog) TryNGettext(msgidSingular string, msgidPlural string, 
 		return fallbackMsgstr, err
 	}
 
-	msgidMap, err := mc.getMsgidObject("", msgidSingular)
+	msgidMap, err := mc.getMsgidMap("", msgidSingular)
 	if err != nil {
 		return fallbackMsgstr, err
 	}
@@ -318,7 +318,7 @@ func (mc *MessageCatalog) TryPGettext(msgctxt string, msgid string) (string, err
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
-	msgidMap, err := mc.getMsgidObject(msgctxt, msgid)
+	msgidMap, err := mc.getMsgidMap(msgctxt, msgid)
 	if err != nil {
 		return msgid, err
 	}
