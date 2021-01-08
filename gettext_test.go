@@ -113,7 +113,8 @@ func (t *TestSuite) TestMessageCatalog_Gettext_MsgidExists() {
 
 func (t *TestSuite) TestMessageCatalog_Gettext_MsgidMissing() {
 	msgid := "This msgid doesn't exist."
-	msgstr := t.mc.Gettext(msgid)
+	msgstr, err := t.mc.TryGettext(msgid)
+	t.EqualError(err, ErrorMsgidNotFound.Error())
 	t.EqualValues(msgid, msgstr)
 }
 
@@ -133,4 +134,25 @@ func (t *TestSuite) TestMessageCatalog_NGettext_Many() {
 	msgid := "%d user likes this."
 	msgstr := t.mc.NGettext(msgid, "plural", 5)
 	t.EqualValues("many", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_NGettext_InvalidPluralForms() {
+	mc, err := NewMessageCatalogFromString(`
+msgid ""
+msgstr ""
+"Plural-Forms: nplurals=3; plural=(n!==1 ? 1 : 0);\n"
+`)
+	t.Error(err)
+	t.Nil(mc)
+}
+
+func (t *TestSuite) TestMessageCatalog_PGettext_Valid() {
+	msgstr := t.mc.PGettext("Button label", "Log in")
+	t.EqualValues("Войти", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_PGettext_MissingMsgctxt() {
+	msgstr, err := t.mc.TryPGettext("Butt", "Log in")
+	t.EqualError(err, ErrorMsgctxtNotFound.Error())
+	t.EqualValues("Log in", msgstr)
 }

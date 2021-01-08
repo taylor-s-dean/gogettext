@@ -7,8 +7,28 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/taylor-s-dean/gogettext/plurals-parser"
 	"github.com/taylor-s-dean/gogettext/po2json"
+)
+
+type Error string
+
+func (e Error) Error() string {
+	return string(e)
+}
+
+const (
+	ErrorMsgctxtNotFound                = Error("message context not found")
+	ErrorMsgidNotFound                  = Error("message identifier not found")
+	ErrorTranslationNotFound            = Error("translation not found")
+	ErrorPluralNotFound                 = Error("plurals not found")
+	ErrorNilMessageCatalog              = Error("message catalog is nil")
+	ErrorMsgctxtTypeAssertionFailed     = Error("message context type assertion failed")
+	ErrorMsgidTypeAssertionFailed       = Error("message context type assertion failed")
+	ErrorPluralsTypeAssertionFailed     = Error("message context type assertion failed")
+	ErrorTranslationTypeAssertionFailed = Error("message context type assertion failed")
+	ErrorPluralIndexOutOfBounds         = Error("plural index out of bounds")
 )
 
 var (
@@ -31,11 +51,11 @@ func NewMessageCatalogFromFile(filePath string) (*MessageCatalog, error) {
 	mc.mutex.Unlock()
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to load .po file")
 	}
 
 	if err := mc.setPluralForms(); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to set plural forms")
 	}
 
 	return mc, nil
@@ -50,11 +70,11 @@ func NewMessageCatalogFromString(fileContents string) (*MessageCatalog, error) {
 	mc.mutex.Unlock()
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to load .po file")
 	}
 
 	if err := mc.setPluralForms(); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to set plural forms")
 	}
 
 	return mc, nil
@@ -69,11 +89,11 @@ func NewMessageCatalogFromBytes(fileContents []byte) (*MessageCatalog, error) {
 	mc.mutex.Unlock()
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to load .po file")
 	}
 
 	if err := mc.setPluralForms(); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to set plural forms")
 	}
 
 	return mc, nil
@@ -85,12 +105,12 @@ func (mc *MessageCatalog) GetMessages() (map[string]interface{}, error) {
 	mc.mutex.RUnlock()
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal message catalog")
 	}
 
 	messages := &map[string]interface{}{}
 	if err := json.Unmarshal(messagesBytes, messages); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unmarshal message catalog")
 	}
 
 	return *messages, nil
@@ -114,7 +134,7 @@ func (mc *MessageCatalog) setPluralForms() error {
 
 	msgctxtMap, ok := msgctxtObj.(map[string]interface{})
 	if !ok {
-		return nil
+		return ErrorMsgctxtTypeAssertionFailed
 	}
 
 	msgidObj, ok := msgctxtMap[""]
@@ -124,7 +144,7 @@ func (mc *MessageCatalog) setPluralForms() error {
 
 	msgidMap, ok := msgidObj.(map[string]interface{})
 	if !ok {
-		return nil
+		return ErrorMsgidTypeAssertionFailed
 	}
 
 	pluralFormsObj, ok := msgidMap["Plural-Forms"]
@@ -134,7 +154,7 @@ func (mc *MessageCatalog) setPluralForms() error {
 
 	pluralFormsStr, ok := pluralFormsObj.(string)
 	if !ok {
-		return nil
+		return ErrorTranslationTypeAssertionFailed
 	}
 
 	matches := pluralFormsRegex.FindStringSubmatch(pluralFormsStr)
@@ -143,6 +163,10 @@ func (mc *MessageCatalog) setPluralForms() error {
 	}
 
 	mc.pluralForms = matches[2]
+	if _, err := pluralsparser.Evaluate(mc.pluralForms, 0); err != nil {
+		return err
+	}
+
 	mc.nPlurals, err = strconv.ParseInt(matches[1], 10, 64)
 
 	if err != nil {
@@ -152,48 +176,70 @@ func (mc *MessageCatalog) setPluralForms() error {
 	return nil
 }
 
-func (mc *MessageCatalog) Gettext(msgid string) string {
+func (mc *MessageCatalog) getMsgidObject(msgctxt string, msgid string) (map[string]interface{}, error) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
 	if mc.messages == nil {
-		return msgid
+		return nil, ErrorNilMessageCatalog
 	}
 
-	msgctxtObj, ok := mc.messages[""]
+	msgctxtObj, ok := mc.messages[msgctxt]
 	if !ok {
-		return msgid
+		return nil, ErrorMsgctxtNotFound
 	}
 
 	msgctxtMap, ok := msgctxtObj.(map[string]interface{})
 	if !ok {
-		return msgid
+		return nil, ErrorMsgctxtTypeAssertionFailed
 	}
 
 	msgidObj, ok := msgctxtMap[msgid]
 	if !ok {
-		return msgid
+		return nil, ErrorMsgidNotFound
 	}
 
 	msgidMap, ok := msgidObj.(map[string]interface{})
 	if !ok {
-		return msgid
+		return nil, ErrorMsgidTypeAssertionFailed
+	}
+
+	return msgidMap, nil
+}
+
+func (mc *MessageCatalog) Gettext(msgid string) string {
+	msgstr, _ := mc.TryGettext(msgid)
+	return msgstr
+}
+
+func (mc *MessageCatalog) TryGettext(msgid string) (string, error) {
+	mc.mutex.RLock()
+	defer mc.mutex.RUnlock()
+
+	msgidMap, err := mc.getMsgidObject("", msgid)
+	if err != nil {
+		return msgid, err
 	}
 
 	msgstrObj, ok := msgidMap["translation"]
 	if !ok {
-		return msgid
+		return msgid, ErrorTranslationNotFound
 	}
 
 	msgstrStr, ok := msgstrObj.(string)
 	if !ok {
-		return msgid
+		return msgid, ErrorTranslationTypeAssertionFailed
 	}
 
-	return msgstrStr
+	return msgstrStr, nil
 }
 
 func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, n int) string {
+	msgstr, _ := mc.TryNGettext(msgidSingular, msgidPlural, n)
+	return msgstr
+}
+
+func (mc *MessageCatalog) TryNGettext(msgidSingular string, msgidPlural string, n int) (string, error) {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
@@ -204,47 +250,55 @@ func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, n i
 
 	idxUint, err := pluralsparser.Evaluate(mc.pluralForms, uint64(n))
 	if err != nil {
-		return fallbackMsgstr
+		return fallbackMsgstr, err
 	}
 
-	idx := int(idxUint)
-	if mc.messages == nil {
-		return fallbackMsgstr
-	}
-
-	msgctxtObj, ok := mc.messages[""]
-	if !ok {
-		return fallbackMsgstr
-	}
-
-	msgctxtMap, ok := msgctxtObj.(map[string]interface{})
-	if !ok {
-		return fallbackMsgstr
-	}
-
-	msgidObj, ok := msgctxtMap[msgidSingular]
-	if !ok {
-		return fallbackMsgstr
-	}
-
-	msgidMap, ok := msgidObj.(map[string]interface{})
-	if !ok {
-		return fallbackMsgstr
+	msgidMap, err := mc.getMsgidObject("", msgidSingular)
+	if err != nil {
+		return fallbackMsgstr, err
 	}
 
 	msgstrPluralsObj, ok := msgidMap["plurals"]
 	if !ok {
-		return fallbackMsgstr
+		return fallbackMsgstr, ErrorPluralNotFound
 	}
 
 	msgstrPluralsList, ok := msgstrPluralsObj.([]string)
 	if !ok {
-		return fallbackMsgstr
+		return fallbackMsgstr, ErrorPluralsTypeAssertionFailed
 	}
 
+	idx := int(idxUint)
 	if len(msgstrPluralsList) < idx+1 {
-		return fallbackMsgstr
+		return fallbackMsgstr, ErrorPluralIndexOutOfBounds
 	}
 
-	return msgstrPluralsList[idx]
+	return msgstrPluralsList[idx], nil
+}
+
+func (mc *MessageCatalog) PGettext(msgctxt string, msgid string) string {
+	msgstr, _ := mc.TryPGettext(msgctxt, msgid)
+	return msgstr
+}
+
+func (mc *MessageCatalog) TryPGettext(msgctxt string, msgid string) (string, error) {
+	mc.mutex.RLock()
+	defer mc.mutex.RUnlock()
+
+	msgidMap, err := mc.getMsgidObject(msgctxt, msgid)
+	if err != nil {
+		return msgid, err
+	}
+
+	msgstrObj, ok := msgidMap["translation"]
+	if !ok {
+		return msgid, ErrorTranslationNotFound
+	}
+
+	msgstrStr, ok := msgstrObj.(string)
+	if !ok {
+		return msgid, ErrorTranslationTypeAssertionFailed
+	}
+
+	return msgstrStr, nil
 }
