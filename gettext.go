@@ -123,28 +123,9 @@ func (mc *MessageCatalog) setPluralForms() error {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
-	if mc.messages == nil {
-		return nil
-	}
-
-	msgctxtObj, ok := mc.messages[""]
-	if !ok {
-		return nil
-	}
-
-	msgctxtMap, ok := msgctxtObj.(map[string]interface{})
-	if !ok {
-		return ErrorMsgctxtTypeAssertionFailed
-	}
-
-	msgidObj, ok := msgctxtMap[""]
-	if !ok {
-		return nil
-	}
-
-	msgidMap, ok := msgidObj.(map[string]interface{})
-	if !ok {
-		return ErrorMsgidTypeAssertionFailed
+	msgidMap, err := mc.getMsgidMap("", "")
+	if err != nil {
+		return err
 	}
 
 	pluralFormsObj, ok := msgidMap["Plural-Forms"]

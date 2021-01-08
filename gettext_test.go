@@ -124,6 +124,34 @@ func (t *TestSuite) TestMessageCatalog_GetMessages() {
 	t.True(reflect.DeepEqual(t.messages, messages))
 }
 
+func (t *TestSuite) TestMessageCatalog_setPluralForms_Valid() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{}
+	err = json.Unmarshal([]byte(`{"": {"": {"Plural-Forms": "(n==1 ? 0 : 1)"}}}`), &mc.messages)
+	t.NoError(err)
+	t.NotNil(mc)
+	err = mc.setPluralForms()
+	t.NoError(err)
+}
+
+func (t *TestSuite) TestMessageCatalog_setPluralForms_NilMessageCatalog() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = nil
+	err = mc.setPluralForms()
+	t.EqualError(err, ErrorNilMessageCatalog.Error())
+}
+
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_Valid() {
+	msgidMap, err := t.mc.getMsgidMap("", "")
+	t.NoError(err)
+	t.NotNil(msgidMap)
+	t.True(reflect.DeepEqual(t.messages[""].(map[string]interface{})[""].(map[string]interface{}), msgidMap))
+}
+
 func (t *TestSuite) TestMessageCatalog_getMsgidMap_NilMessageCatalog() {
 	mc, err := NewMessageCatalogFromBytes([]byte(""))
 	t.NoError(err)
