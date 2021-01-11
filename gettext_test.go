@@ -457,3 +457,45 @@ func (t *TestSuite) TestMessageCatalog_TryNPGettext_Plural_MsgidNotFound() {
 	t.EqualError(err, ErrorMsgidNotFound.Error())
 	t.Equal(msgstr, "plural")
 }
+
+func (t *TestSuite) TestMessageCatalog_SearchMsgids_Valid() {
+	mc, err := NewMessageCatalogFromBytes([]byte(`
+msgid "braze.1234.name"
+msgstr "name"
+
+msgctxt "context"
+msgid "braze.1234.address"
+msgstr "address"
+
+msgid "braze.1235.age"
+msgstr "age"
+
+msgctxt "more context"
+msgid "braze.1235.place-of-birth"
+msgstr "place of birth"
+`))
+	t.NoError(err)
+	t.NotNil(mc)
+	results, err := mc.SearchMsgids(`braze\.1234\.[a-zA-Z0-9_-]`)
+	t.NoError(err)
+	t.ElementsMatch(results, []SearchResults{
+		{Msgctxt: "", Msgid: "braze.1234.name"},
+		{Msgctxt: "context", Msgid: "braze.1234.address"},
+	})
+}
+
+func (t *TestSuite) TestMessageCatalog_SearchMsgids_MsgctxtTypeAssertionFailed() {
+	mc, err := NewMessageCatalogFromBytes([]byte(""))
+	t.NoError(err)
+	t.NotNil(mc)
+	mc.messages = map[string]interface{}{"": ""}
+	results, err := mc.SearchMsgids(`braze\.1234\.[a-zA-Z0-9_-]`)
+	t.EqualError(err, ErrorMsgctxtTypeAssertionFailed.Error())
+	t.Nil(results)
+}
+
+func (t *TestSuite) TestMessageCatalog_SearchMsgids_InvalidRegex() {
+	results, err := t.mc.SearchMsgids(`****`)
+	t.EqualError(err, "error parsing regexp: missing argument to repetition operator: `*`")
+	t.Nil(results)
+}

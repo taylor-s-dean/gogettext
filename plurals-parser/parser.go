@@ -163,11 +163,13 @@ func (x *yyLex) num(c rune, yylval *yySymType) int {
 		}
 		return nil
 	}
+
 	b := strings.Builder{}
 	if err := add(&b, c); err != nil {
 		x.Err = err
 		return eof
 	}
+
 L:
 	for {
 		switch {
@@ -181,6 +183,7 @@ L:
 			break L
 		}
 	}
+
 	var err error
 	yylval.num, err = strconv.ParseUint(b.String(), 10, 64)
 	if err != nil {
