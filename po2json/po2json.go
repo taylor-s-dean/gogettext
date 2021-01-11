@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -47,7 +48,7 @@ var (
 	regexMsgidPlural    = regexp.MustCompile(`msgid_plural\s+"(.*)"`)
 	regexMsgstrPlural   = regexp.MustCompile(`msgstr\[\d+\]\s+"(.*)"`)
 	regexString         = regexp.MustCompile(`"(.*)"`)
-	regexHeaderKeyValue = regexp.MustCompile(`([a-zA-Z0-9-]+)\s*:\s*(.*?)\\n`)
+	regexHeaderKeyValue = regexp.MustCompile(`([a-zA-Z0-9-]+)\s*:\s*(.*?)(?:\\n|\z)`)
 )
 
 type loader struct {
@@ -57,7 +58,7 @@ type loader struct {
 	poJSON     map[string]interface{}
 }
 
-func NewLoader() *loader {
+func newLoader() *loader {
 	return &loader{
 		state:      stateUnspecified,
 		nextStates: map[stateEnum]bool{stateMsgctxt: true, stateMsgid: true},
@@ -65,6 +66,9 @@ func NewLoader() *loader {
 	}
 }
 
+// LoadFile reads the contents of a .po file and loads it into
+// a map[string]interface{}. An error is returned if the file doesn't exist
+// or if the file is in an invalid format.
 func LoadFile(filePath string) (map[string]interface{}, error) {
 	fileContents, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -74,12 +78,18 @@ func LoadFile(filePath string) (map[string]interface{}, error) {
 	return LoadBytes(fileContents)
 }
 
+// LoadString loads a string representation of a .po file into
+// a map[string]interface{}. An error is returned if the file doesn't exist
+// or if the file is in an invalid format.
 func LoadString(fileContents string) (map[string]interface{}, error) {
 	return LoadBytes([]byte(fileContents))
 }
 
+// LoadBytes loads a byte slice representation of a .po file into
+// a map[string]interface{}. An error is returned if the file doesn't exist
+// or if the file is in an invalid format.
 func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
-	l := NewLoader()
+	l := newLoader()
 
 	for _, line := range bytes.Split(fileContents, []byte("\n")) {
 		// Ignore the line if it is a comment.
@@ -253,13 +263,17 @@ func (l *loader) expectState() error {
 }
 
 func (l *loader) printNextStates() string {
+	states := []string{}
+	for state := range l.nextStates {
+		states = append(states, stateStrings[state])
+	}
+	sort.Strings(states)
+
 	ss := strings.Builder{}
 	ss.WriteRune('{')
-	idx := 0
-	for state := range l.nextStates {
-		idx++
-		ss.WriteString(stateStrings[state])
-		if idx < len(l.nextStates) {
+	for idx, state := range states {
+		ss.WriteString(state)
+		if idx < len(states)-1 {
 			ss.WriteString(", ")
 		}
 	}

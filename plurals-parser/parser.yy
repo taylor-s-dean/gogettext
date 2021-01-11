@@ -4,10 +4,11 @@ package pluralsparser
 
 import (
     "fmt"
-    "log"
-    "unicode/utf8"
-    "strings"
     "strconv"
+    "strings"
+    "unicode/utf8"
+
+    "github.com/pkg/errors"
 )
 %}
 
@@ -251,26 +252,36 @@ func (x *yyLex) Lex(yylval *yySymType) (res int) {
 }
 
 func (x *yyLex) num(c rune, yylval *yySymType) int {
-	add := func(b *strings.Builder, c rune) {
+	add := func(b *strings.Builder, c rune) error {
 		if _, err := b.WriteRune(c); err != nil {
-			log.Fatalf("WriteRune: %s", err)
+            return errors.Wrap(err, fmt.Sprintf("Failed to write rune %q", c))
 		}
+        return nil
 	}
+
 	b := strings.Builder{}
-	add(&b, c)
+	if err := add(&b, c); err != nil {
+        x.Err = err
+        return eof
+    }
+
 	L: for {
 		switch {
 		case isNumber[x.peek]:
 		    c = x.next()
-			add(&b, c)
+            if err := add(&b, c); err != nil {
+                x.Err = err
+                return eof
+            }
 		default:
-			break L
+            break L
 		}
 	}
+
     var err error
 	yylval.num, err = strconv.ParseUint(b.String(), 10, 64)
 	if err != nil {
-		log.Printf("ERRtokOR: %s. Bad number %q", err, b.String())
+        x.Err = errors.Wrap(err, fmt.Sprintf("ERROR: %s. Bad number %q", err, b.String()))
 		return eof
 	}
 	return tokNUMBER
