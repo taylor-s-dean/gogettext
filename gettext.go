@@ -321,3 +321,34 @@ func (mc *MessageCatalog) TryNPGettext(msgctxt string, msgidSingular string, msg
 
 	return msgstrPluralsList[idx], nil
 }
+
+type SearchResults struct {
+	Msgctxt string
+	Msgid   string
+}
+
+func (mc *MessageCatalog) SearchMsgids(regex string) ([]SearchResults, error) {
+	re, err := regexp.Compile(regex)
+	if err != nil {
+		return nil, err
+	}
+
+	results := []SearchResults{}
+	for msgctxt, msgctxtObj := range mc.messages {
+		msgctxtMap, ok := msgctxtObj.(map[string]interface{})
+		if !ok {
+			return nil, ErrorMsgctxtTypeAssertionFailed
+		}
+
+		for msgid := range msgctxtMap {
+			if re.MatchString(msgid) {
+				results = append(results, SearchResults{
+					Msgctxt: msgctxt,
+					Msgid:   msgid,
+				})
+			}
+		}
+	}
+
+	return results, nil
+}
