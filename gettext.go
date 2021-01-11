@@ -193,25 +193,7 @@ func (mc *MessageCatalog) Gettext(msgid string) string {
 // This method returns msgid and an error if the corresponding msgstr cannot be
 // found.
 func (mc *MessageCatalog) TryGettext(msgid string) (string, error) {
-	mc.mutex.RLock()
-	defer mc.mutex.RUnlock()
-
-	msgidMap, err := mc.getMsgidMap("", msgid)
-	if err != nil {
-		return msgid, err
-	}
-
-	msgstrObj, ok := msgidMap["translation"]
-	if !ok {
-		return msgid, ErrorTranslationNotFound
-	}
-
-	msgstrStr, ok := msgstrObj.(string)
-	if !ok {
-		return msgid, ErrorTranslationTypeAssertionFailed
-	}
-
-	return msgstrStr, nil
+	return mc.TryPGettext("", msgid)
 }
 
 // NGettext returns the msgid_plural associate with the given msgid and
@@ -240,40 +222,7 @@ func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, qua
 // msgstr, msgidSingular is returned if quantity == 1, otherwise
 // msgidPlural is returned. An error is also returned in these cases.
 func (mc *MessageCatalog) TryNGettext(msgidSingular string, msgidPlural string, quantity int) (string, error) {
-	mc.mutex.RLock()
-	defer mc.mutex.RUnlock()
-
-	fallbackMsgstr := msgidSingular
-	if quantity != 1 {
-		fallbackMsgstr = msgidPlural
-	}
-
-	idxUint, err := pluralsparser.Evaluate(mc.pluralForms, uint64(quantity))
-	if err != nil {
-		return fallbackMsgstr, err
-	}
-
-	msgidMap, err := mc.getMsgidMap("", msgidSingular)
-	if err != nil {
-		return fallbackMsgstr, err
-	}
-
-	msgstrPluralsObj, ok := msgidMap["plurals"]
-	if !ok {
-		return fallbackMsgstr, ErrorPluralNotFound
-	}
-
-	msgstrPluralsList, ok := msgstrPluralsObj.([]string)
-	if !ok {
-		return fallbackMsgstr, ErrorPluralsTypeAssertionFailed
-	}
-
-	idx := int(idxUint)
-	if idx >= len(msgstrPluralsList) {
-		return fallbackMsgstr, ErrorPluralsIndexOutOfBounds
-	}
-
-	return msgstrPluralsList[idx], nil
+	return mc.TryNPGettext("", msgidSingular, msgidPlural, quantity)
 }
 
 // PGettext returns the Particular msgstr associated with the msgctxt
@@ -309,4 +258,66 @@ func (mc *MessageCatalog) TryPGettext(msgctxt string, msgid string) (string, err
 	}
 
 	return msgstrStr, nil
+}
+
+// NPGettext returns the Particular msgstr associate with the given msgctxt,
+// msgid, and quantity.
+// The specific plural returned is determined by evaluating the Plural-Forms
+// header given the specified quantity.
+// The Plural-Forms falls back to `plural=(n==1 ? 0 : 1)` in the event that
+// no Plural-Forms header was provided in the .po file OR evaluation of the
+// plural failed.
+// In the case of plural evaluation failure or failure to find the associated
+// msgstr, msgidSingular is returned if quantity == 1, otherwise
+// msgidPlural is returned.
+func (mc *MessageCatalog) NPGettext(msgctxt string, msgidSingular string, msgidPlural string, quantity int) string {
+	msgstr, _ := mc.TryNPGettext(msgctxt, msgidSingular, msgidPlural, quantity)
+	return msgstr
+}
+
+// TryNPGettext returns the Particular msgstr associate with the given msgctxt,
+// msgid, and quantity.
+// The specific plural returned is determined by evaluating the Plural-Forms
+// header given the specified quantity.
+// The Plural-Forms falls back to `plural=(n==1 ? 0 : 1)` in the event that
+// no Plural-Forms header was provided in the .po file OR evaluation of the
+// plural failed.
+// In the case of plural evaluation failure or failure to find the associated
+// msgstr, msgidSingular is returned if quantity == 1, otherwise
+// msgidPlural is returned. An error is also returned in these cases.
+func (mc *MessageCatalog) TryNPGettext(msgctxt string, msgidSingular string, msgidPlural string, quantity int) (string, error) {
+	mc.mutex.RLock()
+	defer mc.mutex.RUnlock()
+
+	fallbackMsgstr := msgidSingular
+	if quantity != 1 {
+		fallbackMsgstr = msgidPlural
+	}
+
+	idxUint, err := pluralsparser.Evaluate(mc.pluralForms, uint64(quantity))
+	if err != nil {
+		return fallbackMsgstr, err
+	}
+
+	msgidMap, err := mc.getMsgidMap(msgctxt, msgidSingular)
+	if err != nil {
+		return fallbackMsgstr, err
+	}
+
+	msgstrPluralsObj, ok := msgidMap["plurals"]
+	if !ok {
+		return fallbackMsgstr, ErrorPluralNotFound
+	}
+
+	msgstrPluralsList, ok := msgstrPluralsObj.([]string)
+	if !ok {
+		return fallbackMsgstr, ErrorPluralsTypeAssertionFailed
+	}
+
+	idx := int(idxUint)
+	if idx >= len(msgstrPluralsList) {
+		return fallbackMsgstr, ErrorPluralsIndexOutOfBounds
+	}
+
+	return msgstrPluralsList[idx], nil
 }

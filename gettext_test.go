@@ -200,7 +200,7 @@ func (t *TestSuite) TestMessageCatalog_setPluralForms_NoPluralForms() {
 	t.Equal(mc.pluralForms, defaultPluralForms)
 }
 
-func (t *TestSuite) TestMessageCatalog_setPluralForms_PluralsTypeAssertion() {
+func (t *TestSuite) TestMessageCatalog_setPluralForms_PluralsTypeAssertionFailed() {
 	mc, err := NewMessageCatalogFromBytes([]byte(""))
 	t.NoError(err)
 	t.NotNil(mc)
@@ -264,7 +264,7 @@ func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgidNotFound() {
 	t.Nil(msgidMap)
 }
 
-func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgctxtTypeAssertion() {
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgctxtTypeAssertionFailed() {
 	mc, err := NewMessageCatalogFromBytes([]byte(""))
 	t.NoError(err)
 	t.NotNil(mc)
@@ -276,7 +276,7 @@ func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgctxtTypeAssertion() {
 	t.Nil(msgidMap)
 }
 
-func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgidTypeAssertion() {
+func (t *TestSuite) TestMessageCatalog_getMsgidMap_MsgidTypeAssertionFailed() {
 	mc, err := NewMessageCatalogFromBytes([]byte(""))
 	t.NoError(err)
 	t.NotNil(mc)
@@ -312,7 +312,7 @@ func (t *TestSuite) TestMessageCatalog_TryGettext_TranslationNotFound() {
 	t.Equal("", msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_TryGettext_TranslationTypeAssertion() {
+func (t *TestSuite) TestMessageCatalog_TryGettext_TranslationTypeAssertionFailed() {
 	mc, err := NewMessageCatalogFromBytes([]byte(""))
 	t.NoError(err)
 	t.NotNil(mc)
@@ -355,7 +355,7 @@ func (t *TestSuite) TestMessageCatalog_TryNGettext_PluralNotFound() {
 	t.Equal("plural", msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_TryNGettext_PluralsTypeAssertion() {
+func (t *TestSuite) TestMessageCatalog_TryNGettext_PluralsTypeAssertionFailed() {
 	mc, err := NewMessageCatalogFromBytes([]byte(""))
 	t.NoError(err)
 	t.NotNil(mc)
@@ -392,7 +392,7 @@ func (t *TestSuite) TestMessageCatalog_PGettext_Valid() {
 	t.Equal("Войти", msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_TryPGettext_MissingMsgctxt() {
+func (t *TestSuite) TestMessageCatalog_TryPGettext_MsgctxtNotFound() {
 	msgid := "Log in"
 	msgstr, err := t.mc.TryPGettext("Butt", msgid)
 	t.EqualError(err, ErrorMsgctxtNotFound.Error())
@@ -411,7 +411,7 @@ func (t *TestSuite) TestMessageCatalog_TryPGettext_TranslationNotFound() {
 	t.Equal("test", msgstr)
 }
 
-func (t *TestSuite) TestMessageCatalog_TryPGettext_TranslationTypeAssertion() {
+func (t *TestSuite) TestMessageCatalog_TryPGettext_TranslationTypeAssertionFailed() {
 	mc, err := NewMessageCatalogFromBytes([]byte(""))
 	t.NoError(err)
 	t.NotNil(mc)
@@ -421,4 +421,39 @@ func (t *TestSuite) TestMessageCatalog_TryPGettext_TranslationTypeAssertion() {
 	msgstr, err := mc.TryPGettext("", "test")
 	t.EqualError(err, ErrorTranslationTypeAssertionFailed.Error())
 	t.Equal("test", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_NPGettext_Valid_One() {
+	msgstr := t.mc.NPGettext("Context with plural", "One piggy went to the market.", "", 1)
+	t.Equal("Одна свинья ушла на рынок.", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryNPGettext_Valid_One() {
+	msgstr, err := t.mc.TryNPGettext("Context with plural", "One piggy went to the market.", "", 1)
+	t.NoError(err)
+	t.Equal("Одна свинья ушла на рынок.", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryNPGettext_Valid_Few() {
+	msgstr, err := t.mc.TryNPGettext("Context with plural", "One piggy went to the market.", "", 2)
+	t.NoError(err)
+	t.Equal("%d свиньи пошли на рынок.", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryNPGettext_Valid_Many() {
+	msgstr, err := t.mc.TryNPGettext("Context with plural", "One piggy went to the market.", "", 5)
+	t.NoError(err)
+	t.Equal("На рынок вышли %d поросят.", msgstr)
+}
+
+func (t *TestSuite) TestMessageCatalog_TryNPGettext_Singular_MsgctxtNotFound() {
+	msgstr, err := t.mc.TryNPGettext("this doesnt exist", "singular", "plural", 1)
+	t.EqualError(err, ErrorMsgctxtNotFound.Error())
+	t.Equal(msgstr, "singular")
+}
+
+func (t *TestSuite) TestMessageCatalog_TryNPGettext_Plural_MsgidNotFound() {
+	msgstr, err := t.mc.TryNPGettext("Context with plural", "singular", "plural", 2)
+	t.EqualError(err, ErrorMsgidNotFound.Error())
+	t.Equal(msgstr, "plural")
 }
