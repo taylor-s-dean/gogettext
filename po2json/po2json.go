@@ -57,7 +57,7 @@ type loader struct {
 	poJSON     map[string]interface{}
 }
 
-func NewLoader() *loader {
+func newLoader() *loader {
 	return &loader{
 		state:      stateUnspecified,
 		nextStates: map[stateEnum]bool{stateMsgctxt: true, stateMsgid: true},
@@ -65,6 +65,9 @@ func NewLoader() *loader {
 	}
 }
 
+// LoadFile reads the contents of a .po file and loads it into
+// a map[string]interface{}. An error is returned if the file doesn't exist
+// or if the file is in an invalid format.
 func LoadFile(filePath string) (map[string]interface{}, error) {
 	fileContents, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -74,12 +77,18 @@ func LoadFile(filePath string) (map[string]interface{}, error) {
 	return LoadBytes(fileContents)
 }
 
+// LoadString loads a string representation of a .po file into
+// a map[string]interface{}. An error is returned if the file doesn't exist
+// or if the file is in an invalid format.
 func LoadString(fileContents string) (map[string]interface{}, error) {
 	return LoadBytes([]byte(fileContents))
 }
 
+// LoadBytes loads a byte slice representation of a .po file into
+// a map[string]interface{}. An error is returned if the file doesn't exist
+// or if the file is in an invalid format.
 func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
-	l := NewLoader()
+	l := newLoader()
 
 	for _, line := range bytes.Split(fileContents, []byte("\n")) {
 		// Ignore the line if it is a comment.
