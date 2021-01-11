@@ -327,6 +327,11 @@ type SearchResults struct {
 	Msgid   string
 }
 
+// SearchMsgids searches the msgid layer of the underlying data structure for any
+// msgids that match the provided Go regular expression.
+// A list of search results is returned if successful.
+// An error in compiling the regular expression or and error in the structure of
+// the underlying data will result in nil search results and an error.
 func (mc *MessageCatalog) SearchMsgids(regex string) ([]SearchResults, error) {
 	re, err := regexp.Compile(regex)
 	if err != nil {
