@@ -25,17 +25,28 @@ func (t *TestSuite) TestEvaluate_ValidExpressions() {
 
 func (t *TestSuite) TestEvaluate_SyntaxError0() {
 	_, err := Evaluate(")1>2", 0)
-	require.Error(t.T(), err)
+	t.EqualError(err, "parse error: syntax error: unexpected tokRPAREN, expecting tokIDENTIFIER or tokNUMBER or tokLPAREN\n)1>2\n^\n")
 }
 
 func (t *TestSuite) TestEvaluate_SyntaxError1() {
 	_, err := Evaluate("01>2", 0)
-	require.Error(t.T(), err)
+	t.EqualError(err, "parse error: syntax error: unexpected tokNUMBER\n01>2\n ^\n")
 }
 
 func (t *TestSuite) TestEvaluate_SyntaxError2() {
 	_, err := Evaluate("1>>2", 0)
-	require.Error(t.T(), err)
+	t.EqualError(err, "parse error: syntax error: unexpected tokGT, expecting tokIDENTIFIER or tokNUMBER or tokLPAREN\n1>>2\n  ^\n")
+}
+
+func (t *TestSuite) TestYYLex_num_Invalid() {
+	lex := yyLex{
+		peek: 'a',
+		line: []byte("a"),
+	}
+	lval := yySymType{}
+	tok := lex.num('a', &lval)
+	t.Equal(eof, tok)
+	t.EqualError(lex.Err, "ERROR: strconv.ParseUint: parsing \"a\": invalid syntax. Bad number \"a\": strconv.ParseUint: parsing \"a\": invalid syntax")
 }
 
 func BenchmarkEvaluate(b *testing.B) {
