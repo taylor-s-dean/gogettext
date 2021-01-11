@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -47,7 +48,7 @@ var (
 	regexMsgidPlural    = regexp.MustCompile(`msgid_plural\s+"(.*)"`)
 	regexMsgstrPlural   = regexp.MustCompile(`msgstr\[\d+\]\s+"(.*)"`)
 	regexString         = regexp.MustCompile(`"(.*)"`)
-	regexHeaderKeyValue = regexp.MustCompile(`([a-zA-Z0-9-]+)\s*:\s*(.*?)\\n`)
+	regexHeaderKeyValue = regexp.MustCompile(`([a-zA-Z0-9-]+)\s*:\s*(.*?)(?:\\n|\z)`)
 )
 
 type loader struct {
@@ -262,13 +263,17 @@ func (l *loader) expectState() error {
 }
 
 func (l *loader) printNextStates() string {
+	states := []string{}
+	for state := range l.nextStates {
+		states = append(states, stateStrings[state])
+	}
+	sort.Strings(states)
+
 	ss := strings.Builder{}
 	ss.WriteRune('{')
-	idx := 0
-	for state := range l.nextStates {
-		idx++
-		ss.WriteString(stateStrings[state])
-		if idx < len(l.nextStates) {
+	for idx, state := range states {
+		ss.WriteString(state)
+		if idx < len(states)-1 {
 			ss.WriteString(", ")
 		}
 	}
