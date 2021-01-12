@@ -233,7 +233,7 @@ func (x *yyLex) Error(s string) {
 	x.Err = fmt.Errorf("parse error: %s\n%s\n%s\n", s, x.orig, ss.String())
 }
 
-func NewLexer(line []byte, n uint64) *yyLex {
+func newLexer(line []byte, n uint64) *yyLex {
 	c, size := utf8.DecodeRune(line)
 	return &yyLex{
 		line:      line[size:],
@@ -246,9 +246,14 @@ func NewLexer(line []byte, n uint64) *yyLex {
 	}
 }
 
+// Evaluate compiles and evalutes the provided Plural-Format ternary string
+// while supstituting the variable "n" with the provided value.
+//
+// Returns the resulting index into the plural array and an error if an
+// error was encountered.
 func Evaluate(expression string, n uint64) (uint64, error) {
 	yyErrorVerbose = true
-	l := NewLexer([]byte(expression), n)
+	l := newLexer([]byte(expression), n)
 	yyParse(l)
 	return l.Result, l.Err
 }

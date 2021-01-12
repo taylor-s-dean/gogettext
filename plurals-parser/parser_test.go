@@ -1,6 +1,7 @@
 package pluralsparser
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,6 +34,16 @@ func (t *TestSuite) TestEvaluate_ValidExpressions() {
 		require.Exactly(t.T(), expression.Truth, res)
 	}
 
+}
+
+func ExampleEvaluate() {
+	result, err := Evaluate("n % 10 == 1 ? 1 : 0", 11)
+	if err != nil {
+		fmt.Printf("result = %d, err = %s", result, err)
+	} else {
+		fmt.Printf("result = %d, err = nil", result)
+	}
+	// Output: result = 1, err = nil
 }
 
 func (t *TestSuite) TestEvaluate_SyntaxError0() {
