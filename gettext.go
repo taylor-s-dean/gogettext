@@ -237,7 +237,7 @@ func (mc *MessageCatalog) TryGettext(msgid string) (string, error) {
 // The specific plural returned is determined by evaluating the Plural-Forms
 // header given the specified quantity.
 //
-// The Plural-Forms falls back to `plural=(n==1 ? 0 : 1)` in the event that
+// The Plural-Forms falls back to plural=(n==1 ? 0 : 1) in the event that
 // no Plural-Forms header was provided in the .po file OR evaluation of the
 // plural failed.
 //
@@ -255,7 +255,7 @@ func (mc *MessageCatalog) NGettext(msgidSingular string, msgidPlural string, qua
 // The specific plural returned is determined by evaluating the Plural-Forms
 // header given the specified quantity.
 //
-// The Plural-Forms falls back to `plural=(n==1 ? 0 : 1)` in the event that
+// The Plural-Forms falls back to plural=(n==1 ? 0 : 1) in the event that
 // no Plural-Forms header was provided in the .po file OR evaluation of the
 // plural failed.
 //
@@ -309,7 +309,7 @@ func (mc *MessageCatalog) TryPGettext(msgctxt string, msgid string) (string, err
 // The specific plural returned is determined by evaluating the Plural-Forms
 // header given the specified quantity.
 //
-// The Plural-Forms falls back to `plural=(n==1 ? 0 : 1)` in the event that
+// The Plural-Forms falls back to plural=(n==1 ? 0 : 1) in the event that
 // no Plural-Forms header was provided in the .po file OR evaluation of the
 // plural failed.
 //
@@ -327,7 +327,7 @@ func (mc *MessageCatalog) NPGettext(msgctxt string, msgidSingular string, msgidP
 // The specific plural returned is determined by evaluating the Plural-Forms
 // header given the specified quantity.
 //
-// The Plural-Forms falls back to `plural=(n==1 ? 0 : 1)` in the event that
+// The Plural-Forms falls back to plural=(n==1 ? 0 : 1) in the event that
 // no Plural-Forms header was provided in the .po file OR evaluation of the
 // plural failed.
 //
