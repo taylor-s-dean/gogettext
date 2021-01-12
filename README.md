@@ -8,3 +8,4 @@
 Other gettext-like libraries exist for Go, but they either violate the requirement for threadsafety or they do not provide safe access to the underlying message catalog. 
 
 * [gotext](https://github.com/leonelquinteros/gotext) is the most similar library and should be considered as an alternative to `gogettext`. It is threadsafe and emulates much of the C gettext library functionality while freeing itself from many of the environmental constraints of gettext.
+* [gettext](https://github.com/gosexy/gettext) provides Go bindings to the gettext library. This is very useful for standalone programs, but it has all of the limitations of the C gettext library.
