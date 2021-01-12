@@ -26,19 +26,23 @@ type yySymType struct {
 const tokIDENTIFIER = 57346
 const tokNUMBER = 57347
 const tokMOD = 57348
-const tokTHEN = 57349
-const tokELSE = 57350
-const tokLT = 57351
-const tokLE = 57352
-const tokGT = 57353
-const tokGE = 57354
-const tokEQ = 57355
-const tokNE = 57356
-const tokAND = 57357
-const tokOR = 57358
-const tokLPAREN = 57359
-const tokRPAREN = 57360
-const tokINVALID = 57361
+const tokMULTIPLY = 57349
+const tokDIVIDE = 57350
+const tokADD = 57351
+const tokSUBTRACT = 57352
+const tokTHEN = 57353
+const tokELSE = 57354
+const tokLT = 57355
+const tokLE = 57356
+const tokGT = 57357
+const tokGE = 57358
+const tokEQ = 57359
+const tokNE = 57360
+const tokAND = 57361
+const tokOR = 57362
+const tokLPAREN = 57363
+const tokRPAREN = 57364
+const tokINVALID = 57365
 
 var yyToknames = [...]string{
 	"$end",
@@ -47,6 +51,10 @@ var yyToknames = [...]string{
 	"tokIDENTIFIER",
 	"tokNUMBER",
 	"tokMOD",
+	"tokMULTIPLY",
+	"tokDIVIDE",
+	"tokADD",
+	"tokSUBTRACT",
 	"tokTHEN",
 	"tokELSE",
 	"tokLT",
@@ -68,7 +76,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line ./plurals-parser/parser.yy:166
+//line ./plurals-parser/parser.yy:179
 
 const eof = 0
 
@@ -124,8 +132,6 @@ func (x *yyLex) Lex(yylval *yySymType) (res int) {
 		case c == '<' && p == '=':
 			x.next()
 			return tokLE
-		case c == '%':
-			return tokMOD
 		case c == '&' && p == '&':
 			x.next()
 			return tokAND
@@ -146,6 +152,16 @@ func (x *yyLex) Lex(yylval *yySymType) (res int) {
 			return tokLPAREN
 		case c == ')':
 			return tokRPAREN
+		case c == '+':
+			return tokADD
+		case c == '-':
+			return tokSUBTRACT
+		case c == '*':
+			return tokMULTIPLY
+		case c == '/':
+			return tokDIVIDE
+		case c == '%':
+			return tokMOD
 		case c == 'n':
 			yylval.str = string(c)
 			return tokIDENTIFIER
@@ -246,52 +262,58 @@ var yyExca = [...]int{
 
 const yyPrivate = 57344
 
-const yyLast = 56
+const yyLast = 84
 
 var yyAct = [...]int{
-	2, 3, 13, 33, 13, 14, 15, 16, 17, 18,
-	19, 20, 22, 23, 34, 24, 25, 26, 27, 28,
-	29, 30, 31, 32, 13, 12, 10, 14, 15, 16,
-	17, 18, 19, 20, 21, 35, 13, 5, 4, 14,
-	15, 16, 17, 18, 19, 9, 8, 6, 13, 7,
-	11, 14, 15, 16, 17, 1,
+	2, 3, 14, 15, 16, 25, 26, 42, 11, 17,
+	18, 19, 20, 27, 28, 43, 29, 30, 31, 32,
+	33, 34, 35, 36, 37, 38, 39, 40, 41, 14,
+	15, 16, 25, 26, 13, 10, 17, 18, 19, 20,
+	21, 22, 23, 24, 44, 14, 15, 16, 25, 26,
+	9, 6, 17, 18, 19, 20, 21, 22, 23, 14,
+	15, 16, 25, 26, 5, 4, 17, 18, 19, 20,
+	21, 22, 14, 15, 16, 25, 26, 14, 15, 16,
+	8, 12, 7, 1,
 }
 
 var yyPact = [...]int{
-	33, -1000, -1000, 18, -1000, -1000, -1000, -1000, -1000, -1000,
-	-1000, 33, 33, 33, 33, 33, 33, 33, 33, 33,
-	33, 33, -15, 6, -1000, -2, -2, -2, -2, 42,
-	42, 30, -4, -1000, 33, -1000,
+	60, -1000, -1000, 23, -1000, -1000, -1000, -1000, -1000, -1000,
+	-1000, -1000, 60, 60, 60, 60, 60, 60, 60, 60,
+	60, 60, 60, 60, 60, 60, 60, -15, 3, -1000,
+	-1000, -1000, 66, 66, 66, 66, -4, -4, 53, 39,
+	71, 71, -1000, 60, -1000,
 }
 
 var yyPgo = [...]int{
-	0, 55, 1, 0, 49, 47, 46, 45, 26,
+	0, 83, 1, 0, 82, 80, 51, 50, 35, 8,
 }
 
 var yyR1 = [...]int{
-	0, 1, 3, 3, 4, 5, 6, 6, 6, 6,
-	7, 7, 8, 8, 2, 2, 2, 2, 2, 2,
-	2,
+	0, 1, 3, 3, 4, 4, 4, 6, 7, 7,
+	7, 7, 8, 8, 9, 9, 5, 5, 2, 2,
+	2, 2, 2, 2, 2, 2,
 }
 
 var yyR2 = [...]int{
 	0, 1, 1, 5, 3, 3, 3, 3, 3, 3,
-	3, 3, 3, 3, 1, 1, 1, 1, 1, 1,
-	1,
+	3, 3, 3, 3, 3, 3, 3, 3, 1, 1,
+	1, 1, 1, 1, 1, 1,
 }
 
 var yyChk = [...]int{
-	-1000, -1, -3, -2, 5, 4, -5, -4, -6, -7,
-	-8, 17, 7, 6, 9, 10, 11, 12, 13, 14,
-	15, 16, -3, -3, -2, -2, -2, -2, -2, -2,
-	-2, -2, -2, 18, 8, -3,
+	-1000, -1, -3, -2, 5, 4, -6, -4, -5, -7,
+	-8, -9, 21, 11, 6, 7, 8, 13, 14, 15,
+	16, 17, 18, 19, 20, 9, 10, -3, -3, -2,
+	-2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+	-2, -2, 22, 12, -3,
 }
 
 var yyDef = [...]int{
-	0, -2, 1, 2, 14, 15, 16, 17, 18, 19,
-	20, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 4, 6, 7, 8, 9, 10,
-	11, 12, 13, 5, 0, 3,
+	0, -2, 1, 2, 18, 19, 20, 21, 22, 23,
+	24, 25, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
+	5, 6, 8, 9, 10, 11, 12, 13, 14, 15,
+	16, 17, 7, 0, 3,
 }
 
 var yyTok1 = [...]int{
@@ -300,7 +322,8 @@ var yyTok1 = [...]int{
 
 var yyTok2 = [...]int{
 	2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-	12, 13, 14, 15, 16, 17, 18, 19,
+	12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+	22, 23,
 }
 
 var yyTok3 = [...]int{
@@ -646,13 +669,13 @@ yydefault:
 
 	case 1:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line ./plurals-parser/parser.yy:63
+//line ./plurals-parser/parser.yy:68
 		{
 			yylex.(*yyLex).Result = yyDollar[1].num
 		}
 	case 3:
 		yyDollar = yyS[yypt-5 : yypt+1]
-//line ./plurals-parser/parser.yy:71
+//line ./plurals-parser/parser.yy:76
 		{
 			if yyDollar[1].num != 0 {
 				yyVAL.num = yyDollar[3].num
@@ -662,19 +685,31 @@ yydefault:
 		}
 	case 4:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:80
+//line ./plurals-parser/parser.yy:86
 		{
 			yyVAL.num = yyDollar[1].num % yyDollar[3].num
 		}
 	case 5:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:82
+//line ./plurals-parser/parser.yy:87
 		{
-			yyVAL.num = yyDollar[2].num
+			yyVAL.num = yyDollar[1].num * yyDollar[3].num
 		}
 	case 6:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:86
+//line ./plurals-parser/parser.yy:88
+		{
+			yyVAL.num = yyDollar[1].num / yyDollar[3].num
+		}
+	case 7:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line ./plurals-parser/parser.yy:90
+		{
+			yyVAL.num = yyDollar[2].num
+		}
+	case 8:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line ./plurals-parser/parser.yy:94
 		{
 			if yyDollar[1].num < yyDollar[3].num {
 				yyVAL.num = 1
@@ -682,9 +717,9 @@ yydefault:
 				yyVAL.num = 0
 			}
 		}
-	case 7:
+	case 9:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:94
+//line ./plurals-parser/parser.yy:102
 		{
 			if yyDollar[1].num <= yyDollar[3].num {
 				yyVAL.num = 1
@@ -692,9 +727,9 @@ yydefault:
 				yyVAL.num = 0
 			}
 		}
-	case 8:
+	case 10:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:102
+//line ./plurals-parser/parser.yy:110
 		{
 			if yyDollar[1].num > yyDollar[3].num {
 				yyVAL.num = 1
@@ -702,9 +737,9 @@ yydefault:
 				yyVAL.num = 0
 			}
 		}
-	case 9:
+	case 11:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:110
+//line ./plurals-parser/parser.yy:118
 		{
 			if yyDollar[1].num >= yyDollar[3].num {
 				yyVAL.num = 1
@@ -712,9 +747,9 @@ yydefault:
 				yyVAL.num = 0
 			}
 		}
-	case 10:
+	case 12:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:121
+//line ./plurals-parser/parser.yy:129
 		{
 			if yyDollar[1].num == yyDollar[3].num {
 				yyVAL.num = 1
@@ -722,9 +757,9 @@ yydefault:
 				yyVAL.num = 0
 			}
 		}
-	case 11:
+	case 13:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:129
+//line ./plurals-parser/parser.yy:137
 		{
 			if yyDollar[1].num != yyDollar[3].num {
 				yyVAL.num = 1
@@ -732,9 +767,9 @@ yydefault:
 				yyVAL.num = 0
 			}
 		}
-	case 12:
+	case 14:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:140
+//line ./plurals-parser/parser.yy:148
 		{
 			if yyDollar[1].num != 0 && yyDollar[3].num != 0 {
 				yyVAL.num = 1
@@ -742,9 +777,9 @@ yydefault:
 				yyVAL.num = 0
 			}
 		}
-	case 13:
+	case 15:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line ./plurals-parser/parser.yy:148
+//line ./plurals-parser/parser.yy:156
 		{
 			if yyDollar[1].num != 0 || yyDollar[3].num != 0 {
 				yyVAL.num = 1
@@ -752,9 +787,21 @@ yydefault:
 				yyVAL.num = 0
 			}
 		}
-	case 15:
+	case 16:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line ./plurals-parser/parser.yy:166
+		{
+			yyVAL.num = yyDollar[1].num + yyDollar[3].num
+		}
+	case 17:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line ./plurals-parser/parser.yy:167
+		{
+			yyVAL.num = yyDollar[1].num - yyDollar[3].num
+		}
+	case 19:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line ./plurals-parser/parser.yy:159
+//line ./plurals-parser/parser.yy:171
 		{
 			yyVAL.num = yylex.(*yyLex).Variables[yyDollar[1].str]
 		}

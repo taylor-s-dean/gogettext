@@ -20,19 +20,23 @@ import (
 %token <str> tokIDENTIFIER
 %token <num> tokNUMBER
 %token
-    tokMOD
-    tokTHEN
-    tokELSE
-    tokLT
-    tokLE
-    tokGT
-    tokGE
-    tokEQ
-    tokNE
-    tokAND
-    tokOR
-    tokLPAREN
-    tokRPAREN
+    tokMOD          // %
+    tokMULTIPLY     // *
+    tokDIVIDE       // /
+    tokADD          // +
+    tokSUBTRACT     // -
+    tokTHEN         // ?
+    tokELSE         // :
+    tokLT           // <
+    tokLE           // <=
+    tokGT           // >
+    tokGE           // >=
+    tokEQ           // ==
+    tokNE           // !=
+    tokAND          // &&
+    tokOR           // ||
+    tokLPAREN       // (
+    tokRPAREN       // )
     tokINVALID
 ;
 
@@ -41,19 +45,20 @@ import (
     expression
     if_statement
     multiplicative
+    additive
     associative
     relational
     equality
     logical
 ;
 
+%right tokTHEN tokELSE
 %left tokOR
-%left tokAND;
-%left tokEQ tokNE;
-%left tokLT tokLE tokGT tokGE;
-%left tokMOD;
-%left tokTHEN;
-%right tokELSE;
+%left tokAND
+%left tokEQ tokNE
+%left tokLT tokLE tokGT tokGE
+%left tokADD tokSUBTRACT
+%left tokMOD tokMULTIPLY tokDIVIDE
 
 %start unit;
 
@@ -77,9 +82,12 @@ if_statement:
     }
 ;
 
-multiplicative: expression tokMOD expression   { $$ = $1 % $3 };
+multiplicative:
+  expression tokMOD expression      { $$ = $1 % $3 }
+| expression tokMULTIPLY expression { $$ = $1 * $3 }
+| expression tokDIVIDE expression   { $$ = $1 / $3 }
 
-associative: tokLPAREN if_statement tokRPAREN   { $$ = $2 };
+associative: tokLPAREN if_statement tokRPAREN   { $$ = $2 }
 
 relational:
   expression tokLT expression
@@ -118,7 +126,7 @@ relational:
 
 equality:
   expression tokEQ expression
-   {
+    {
         if $1 == $3 {
             $$ = 1
         } else {
@@ -126,7 +134,7 @@ equality:
         }
     }
 | expression tokNE expression
-   {
+    {
         if $1 != $3 {
             $$ = 1
         } else {
@@ -137,7 +145,7 @@ equality:
 
 logical:
   expression tokAND expression
-   {
+    {
         if $1 != 0 && $3 != 0 {
             $$ = 1
         } else {
@@ -154,11 +162,16 @@ logical:
     }
 ;
 
+additive:
+  expression tokADD expression      { $$ = $1 + $3 }
+| expression tokSUBTRACT expression { $$ = $1 - $3 }
+
 expression:
   tokNUMBER
 | tokIDENTIFIER  { $$ = yylex.(*yyLex).Variables[$1] }
 | associative
 | multiplicative
+| additive
 | relational
 | equality
 | logical
@@ -219,8 +232,6 @@ func (x *yyLex) Lex(yylval *yySymType) (res int) {
         case c == '<' && p == '=':
             x.next()
             return tokLE
-        case c == '%':
-            return tokMOD
         case c == '&' && p == '&':
             x.next()
             return tokAND
@@ -241,6 +252,16 @@ func (x *yyLex) Lex(yylval *yySymType) (res int) {
             return tokLPAREN
         case c == ')':
             return tokRPAREN
+        case c == '+':
+            return tokADD
+        case c == '-':
+            return tokSUBTRACT
+        case c == '*':
+            return tokMULTIPLY
+        case c == '/':
+            return tokDIVIDE
+        case c == '%':
+            return tokMOD
         case c == 'n':
             yylval.str = string(c)
             return tokIDENTIFIER

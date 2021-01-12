@@ -21,6 +21,18 @@ func (t *TestSuite) TestEvaluate_ValidExpressions() {
 		require.NoError(t.T(), err)
 		require.Exactly(t.T(), expression.Truth, res)
 	}
+
+	for _, expression := range []testExpression{
+		{Expression: "1 + n", N: 1, Truth: 2},
+		{Expression: "1 - n", N: 1, Truth: 0},
+		{Expression: "1 * n", N: 1, Truth: 1},
+		{Expression: "2 / n", N: 2, Truth: 1},
+	} {
+		res, err := Evaluate(expression.Expression, expression.N)
+		require.NoError(t.T(), err)
+		require.Exactly(t.T(), expression.Truth, res)
+	}
+
 }
 
 func (t *TestSuite) TestEvaluate_SyntaxError0() {
