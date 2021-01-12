@@ -67,7 +67,9 @@ func newLoader() *loader {
 }
 
 // LoadFile reads the contents of a .po file and loads it into
-// a map[string]interface{}. An error is returned if the file doesn't exist
+// a map[string]interface{}.
+//
+// An error is returned if the file doesn't exist
 // or if the file is in an invalid format.
 func LoadFile(filePath string) (map[string]interface{}, error) {
 	fileContents, err := ioutil.ReadFile(filePath)
@@ -79,14 +81,18 @@ func LoadFile(filePath string) (map[string]interface{}, error) {
 }
 
 // LoadString loads a string representation of a .po file into
-// a map[string]interface{}. An error is returned if the file doesn't exist
+// a map[string]interface{}.
+//
+// An error is returned if the file doesn't exist
 // or if the file is in an invalid format.
 func LoadString(fileContents string) (map[string]interface{}, error) {
 	return LoadBytes([]byte(fileContents))
 }
 
 // LoadBytes loads a byte slice representation of a .po file into
-// a map[string]interface{}. An error is returned if the file doesn't exist
+// a map[string]interface{}.
+//
+// An error is returned if the file doesn't exist
 // or if the file is in an invalid format.
 func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
 	l := newLoader()
