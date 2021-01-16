@@ -324,6 +324,17 @@ func (t *TestSuite) TestMessageCatalog_TryGettext_TranslationTypeAssertionFailed
 	t.Equal("", msgstr)
 }
 
+func (t *TestSuite) TestMessageCatalog_TryGettext_WithStringEscapes() {
+	mc, err := NewMessageCatalogFromString(`
+msgid "test\"with quotes\"\nand a newline"
+msgstr "This is a \"quoted\" string with a\nnewline."
+`)
+	t.NoError(err)
+	msgstr, err := mc.TryGettext("test\"with quotes\"\nand a newline")
+	t.NoError(err)
+	t.Equal("This is a \"quoted\" string with a\nnewline.", msgstr)
+}
+
 func (t *TestSuite) TestMessageCatalog_NGettext_Valid() {
 	msgid := "%d user likes this."
 	msgstr := t.mc.NGettext(msgid, "plural", 2)
