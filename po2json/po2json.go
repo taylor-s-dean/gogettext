@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -42,13 +43,13 @@ var (
 
 	regexComment        = regexp.MustCompile(`\s*#.*`)
 	regexEmpty          = regexp.MustCompile(`^\s*$`)
-	regexMsgctxt        = regexp.MustCompile(`msgctxt\s+"(.*)"`)
-	regexMsgid          = regexp.MustCompile(`msgid\s+"(.*)"`)
-	regexMsgstr         = regexp.MustCompile(`msgstr\s+"(.*)"`)
-	regexMsgidPlural    = regexp.MustCompile(`msgid_plural\s+"(.*)"`)
-	regexMsgstrPlural   = regexp.MustCompile(`msgstr\[\d+\]\s+"(.*)"`)
-	regexString         = regexp.MustCompile(`"(.*)"`)
-	regexHeaderKeyValue = regexp.MustCompile(`([a-zA-Z0-9-]+)\s*:\s*(.*?)(?:\\n|\z)`)
+	regexMsgctxt        = regexp.MustCompile(`msgctxt\s+(".*")`)
+	regexMsgid          = regexp.MustCompile(`msgid\s+(".*")`)
+	regexMsgstr         = regexp.MustCompile(`msgstr\s+(".*")`)
+	regexMsgidPlural    = regexp.MustCompile(`msgid_plural\s+(".*")`)
+	regexMsgstrPlural   = regexp.MustCompile(`msgstr\[\d+\]\s+(".*")`)
+	regexString         = regexp.MustCompile(`(".*")`)
+	regexHeaderKeyValue = regexp.MustCompile(`([a-zA-Z0-9-]+)\s*:\s*(.*?)(?:\n|\z)`)
 )
 
 type loader struct {
@@ -127,7 +128,12 @@ func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
 			}
 
 			l.nextStates = map[stateEnum]bool{stateMsgid: true}
-			l.key.Msgctxt.Write(submatch[1])
+
+			msg, err := strconv.Unquote(string(submatch[1]))
+			if err != nil {
+				return nil, err
+			}
+			l.key.Msgctxt.WriteString(msg)
 			continue
 		}
 
@@ -141,7 +147,12 @@ func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
 			}
 
 			l.nextStates = map[stateEnum]bool{stateMsgidPlural: true, stateMsgstr: true}
-			l.key.Msgid.Write(submatch[1])
+
+			msg, err := strconv.Unquote(string(submatch[1]))
+			if err != nil {
+				return nil, err
+			}
+			l.key.Msgid.WriteString(msg)
 			continue
 		}
 
@@ -155,7 +166,12 @@ func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
 			}
 
 			l.nextStates = map[stateEnum]bool{stateMsgidPlural: true, stateMsgstr: true}
-			l.key.Msgstr.Write(submatch[1])
+
+			msg, err := strconv.Unquote(string(submatch[1]))
+			if err != nil {
+				return nil, err
+			}
+			l.key.Msgstr.WriteString(msg)
 			continue
 		}
 
@@ -169,7 +185,12 @@ func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
 			}
 
 			l.nextStates = map[stateEnum]bool{stateMsgstrPlural: true}
-			l.key.MsgidPlural.Write(submatch[1])
+
+			msg, err := strconv.Unquote(string(submatch[1]))
+			if err != nil {
+				return nil, err
+			}
+			l.key.MsgidPlural.WriteString(msg)
 			continue
 		}
 
@@ -183,8 +204,13 @@ func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
 			}
 
 			l.nextStates = map[stateEnum]bool{stateMsgstrPlural: true}
+
+			msg, err := strconv.Unquote(string(submatch[1]))
+			if err != nil {
+				return nil, err
+			}
 			plural := strings.Builder{}
-			plural.Write(submatch[1])
+			plural.WriteString(msg)
 			l.key.MsgstrPlural = append(l.key.MsgstrPlural, &plural)
 			continue
 		}
@@ -193,17 +219,22 @@ func LoadBytes(fileContents []byte) (map[string]interface{}, error) {
 		// 1) Append the string to the existing string as determined by the
 		// current_state.
 		if submatch := regexString.FindSubmatch(line); submatch != nil {
+			msg, err := strconv.Unquote(string(submatch[1]))
+			if err != nil {
+				return nil, err
+			}
+
 			switch l.state {
 			case stateMsgctxt:
-				l.key.Msgctxt.Write(submatch[1])
+				l.key.Msgctxt.WriteString(msg)
 			case stateMsgid:
-				l.key.Msgid.Write(submatch[1])
+				l.key.Msgid.WriteString(msg)
 			case stateMsgstr:
-				l.key.Msgstr.Write(submatch[1])
+				l.key.Msgstr.WriteString(msg)
 			case stateMsgidPlural:
-				l.key.MsgidPlural.Write(submatch[1])
+				l.key.MsgidPlural.WriteString(msg)
 			case stateMsgstrPlural:
-				l.key.MsgstrPlural[len(l.key.MsgstrPlural)-1].Write(submatch[1])
+				l.key.MsgstrPlural[len(l.key.MsgstrPlural)-1].WriteString(msg)
 			case stateUnspecified:
 				return nil, errors.New("Encountered invalid state. Please ensure the input file is in a valid .po format.")
 			}
