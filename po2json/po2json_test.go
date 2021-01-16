@@ -2,7 +2,6 @@ package po2json
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -133,7 +132,7 @@ msgstr ""
 
 func (t *TestSuite) TestLoadBytes_EscapedQuotes() {
 	po, err := LoadBytes([]byte(`
-msgid "test"
+msgid "test\"with quotes\"\nand a newline"
 msgstr "This is a \"quoted\" string with a\nnewline."
 `))
 
@@ -143,7 +142,7 @@ msgstr "This is a \"quoted\" string with a\nnewline."
 	t.Equal(`{
     "": {
         "": {},
-        "test": {
+        "test\"with quotes\"\nand a newline": {
             "translation": "This is a \"quoted\" string with a\nnewline."
         }
     }
