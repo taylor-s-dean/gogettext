@@ -2,6 +2,7 @@ package po2json
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -128,6 +129,25 @@ msgstr ""
 ""
 `))
 	t.EqualError(err, "Encountered invalid state. Please ensure the input file is in a valid .po format.")
+}
+
+func (t *TestSuite) TestLoadBytes_EscapedQuotes() {
+	po, err := LoadBytes([]byte(`
+msgid "test"
+msgstr "This is a \"quoted\" string with a\nnewline."
+`))
+
+	t.NoError(err)
+	s, err := json.MarshalIndent(po, "", "    ")
+	t.NoError(err)
+	t.Equal(`{
+    "": {
+        "": {},
+        "test": {
+            "translation": "This is a \"quoted\" string with a\nnewline."
+        }
+    }
+}`, string(s))
 }
 
 func (t *TestSuite) TestLoadBytes_DuplicateMsgid() {
