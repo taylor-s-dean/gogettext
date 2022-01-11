@@ -43,12 +43,12 @@ var (
 
 	regexComment        = regexp.MustCompile(`^#.*$`)
 	regexEmpty          = regexp.MustCompile(`^\s*$`)
-	regexMsgctxt        = regexp.MustCompile(`^msgctxt\s+(".*")`)
-	regexMsgid          = regexp.MustCompile(`^msgid\s+(".*")`)
-	regexMsgstr         = regexp.MustCompile(`^msgstr\s+(".*")`)
-	regexMsgidPlural    = regexp.MustCompile(`^msgid_plural\s+(".*")`)
-	regexMsgstrPlural   = regexp.MustCompile(`^msgstr\[\d+\]\s+(".*")`)
-	regexString         = regexp.MustCompile(`^(".*")`)
+	regexMsgctxt        = regexp.MustCompile(`^msgctxt\s+(".*")$`)
+	regexMsgid          = regexp.MustCompile(`^msgid\s+(".*")$`)
+	regexMsgstr         = regexp.MustCompile(`^msgstr\s+(".*")$`)
+	regexMsgidPlural    = regexp.MustCompile(`^msgid_plural\s+(".*")$`)
+	regexMsgstrPlural   = regexp.MustCompile(`^msgstr\[\d+\]\s+(".*")$`)
+	regexString         = regexp.MustCompile(`^(".*")$`)
 	regexHeaderKeyValue = regexp.MustCompile(`([a-zA-Z0-9-]+)\s*:\s*(.*?)(?:\n|\z)`)
 )
 
