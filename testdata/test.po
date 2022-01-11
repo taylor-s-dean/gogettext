@@ -35,6 +35,9 @@ msgctxt "Context with plural"
 msgid "One piggy went to the market."
 msgstr "Одна свинья ушла на рынок."
 
+msgid "#This is a message with a # sign."
+msgstr "#This is a translation with a # sign."
+
 #, fuzzy
 msgctxt ""
 "Context with plural"
