@@ -31,7 +31,7 @@ var messagesJSON = []byte(`
                 "other"
             ]
         },
-		"#This is a message with a # sign.": {
+        "#This is a message with a # sign.": {
            "translation": "#This is a translation with a # sign."
         },
         "One piggy went to the market.": {
