@@ -1,8 +1,7 @@
 # gogettext
 
-![Go](https://github.com/taylor-s-dean/gogettext/workflows/Go/badge.svg?branch=master)
-![CodeQL](https://github.com/taylor-s-dean/gogettext/workflows/CodeQL/badge.svg?branch=master)
-
+[![Go](https://github.com/taylor-s-dean/gogettext/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/taylor-s-dean/gogettext/actions/workflows/go.yml)
+[![CodeQL](https://github.com/taylor-s-dean/gogettext/actions/workflows/codeql-analysis.yml/badge.svg?branch=master)](https://github.com/taylor-s-dean/gogettext/actions/workflows/codeql-analysis.yml)
 ## Overview
 
 `gogettext` is a library that intends to bring many of the major features of gettext to Go. Its development was driven by the need to have a thread-safe localization library that uses the gettext Portable Object (.po) file format while providing access to the underlying message catalog to the consumer. The C gettext library was originally intended to be used in standalone programs rather than distributed environments. `gogettext` is designed to be free of environmental constraints.
